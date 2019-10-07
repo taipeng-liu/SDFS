@@ -59,11 +59,6 @@ func (s *Sender) SendHeartbeat() {
 			return
 
 		default:
-			// UpQryChan <- UpdateQuery{0, ""}
-			// <-MemListChan
-
-			MonitorList = msg.GetMonitorList(MembershipList, LocalAddress)
-
 			for _, monitorID := range MonitorList {
 				monitorAddress := msg.GetIPAddressFromID(monitorID)
 				udpAddr, err := net.ResolveUDPAddr(msg.ConnType, monitorAddress+":"+msg.HeartbeatPort)
@@ -130,8 +125,9 @@ func SendJoinMsg(introducerAddress string) bool {
 	log.Printf("Sender: JoinAckMsg Received from Introducer, the message type is: %s...: ", joinAckMsg.MessageType)
 
 	if joinAckMsg.MessageType == msg.JoinAckMsg {
-		MembershipList = joinAckMsg.Content
-		UpdateMemHBMap()
+		UpdateMemshipList(joinAckMsg)
+		//MembershipList = joinAckMsg.Content
+		//UpdateMemHBMap()
 
 		return true
 	} else {
@@ -145,11 +141,10 @@ func SendLeaveMsg(ln *net.UDPConn, predecessorID string, leaveNodeID string) {
 
 	leaveMsg := msg.NewMessage(msg.LeaveMsg, LocalID, []string{leaveNodeID})
 	leavePkg := msg.MsgToJSON(leaveMsg)
-	monitorList := msg.GetMonitorList(MembershipList, LocalAddress)
 	log.Println("===Sender: MembershipList is")
-	log.Print(monitorList)
+	log.Print(MonitorList)
 
-	for _, member := range monitorList {
+	for _, member := range MonitorList {
 
 		if member == predecessorID {
 			//Predecessor is the node who sends me LeaveMsg
@@ -185,9 +180,9 @@ func SendLeaveMsg(ln *net.UDPConn, predecessorID string, leaveNodeID string) {
 func SendIntroduceMsg(ln *net.UDPConn, predecessorID string, newNodeID string) {
 	introduceMsg := msg.NewMessage(msg.IntroduceMsg, LocalID, []string{newNodeID})
 	introducePkg := msg.MsgToJSON(introduceMsg)
-	monitorList := msg.GetMonitorList(MembershipList, LocalAddress)
+	//monitorList := msg.GetMonitorList(MembershipList, LocalAddress)
 
-	for _, member := range monitorList {
+	for _, member := range MonitorList {
 		// fmt.Println(i,member)
 		if member == predecessorID {
 			//My predecessor is the one who send me the failMsg
@@ -215,9 +210,9 @@ func SendFailMsg(ln *net.UDPConn, predecessorID string, failNodeID string) {
 	failPkg := msg.MsgToJSON(failMsg)
 	fmt.Printf("Sender: Node %s is failed...\n ", failNodeID)
 
-	monitorList := msg.GetMonitorList(MembershipList, LocalAddress)
+	//monitorList := msg.GetMonitorList(MembershipList, LocalAddress)
 
-	for _, member := range monitorList {
+	for _, member := range MonitorList {
 		if member == predecessorID {
 			//My predecessor is the one who send me the failMsg
 			//I will not send back!!!!!!!!!!!!!

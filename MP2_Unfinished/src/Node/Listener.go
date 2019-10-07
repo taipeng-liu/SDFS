@@ -49,7 +49,7 @@ func HandleListenMsg(conn *net.UDPConn) {
 
 	msgBuf := make([]byte, 1024)
 
-	n, msgAddr, err := conn.ReadFromUDP(msgBuf)
+	n, _, err := conn.ReadFromUDP(msgBuf)
 	if err != nil {
 		log.Fatal(err)
 	}
