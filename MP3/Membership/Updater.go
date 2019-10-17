@@ -4,6 +4,8 @@ import (
 	"log"
 	"sort"
 	"time"
+	"fmt"
+
 	MP "../MsgProtocol"
 )
 
@@ -97,6 +99,7 @@ func AddNode(newNodeID string) bool {
 	_, found := FindNode(newNodeID)
 	if !found {
 		log.Println("AddNode(): Successfully added!")
+		fmt.Printf("NodeID: %s join the group, welcome!\n", newNodeID)
 		MembershipList = append(MembershipList, newNodeID)
 		sort.Strings(MembershipList)
 		log.Print("Updater: New List is: ")
@@ -117,6 +120,7 @@ func DeleteNode(nodeID string) bool {
 	}
 	idx, found := FindNode(nodeID)
 	if found {
+		fmt.Printf("NodeID %s may fail or leave the group\n", nodeID)
 		if idx != len(MembershipList)-1 {
 			MembershipList = append(MembershipList[:idx], MembershipList[idx+1:]...)
 		} else {
