@@ -1,0 +1,45 @@
+2019/10/17 02:50:21 Main: Join the group
+2019/10/17 02:50:21 AddNode(): Adding nodeID fa19-cs425-g73-01.cs.illinois.edu:20191017025021...
+2019/10/17 02:50:21 AddNode(): Successfully added!
+2019/10/17 02:50:21 Updater: New List is: 
+2019/10/17 02:50:21 [fa19-cs425-g73-01.cs.illinois.edu:20191017025021]
+2019/10/17 02:50:34 Main: Leave the group
+2019/10/17 02:50:34 dial UDP :8886: unknown network UDP
+2019/10/17 03:00:17 Main: Join the group
+2019/10/17 03:00:17 AddNode(): Adding nodeID fa19-cs425-g73-01.cs.illinois.edu:20191017030017...
+2019/10/17 03:00:17 AddNode(): Successfully added!
+2019/10/17 03:00:17 Updater: New List is: 
+2019/10/17 03:00:17 [fa19-cs425-g73-01.cs.illinois.edu:20191017030017]
+2019/10/17 03:00:18 Main: Leave the group
+2019/10/17 03:00:18 dial UDP :8887: unknown network UDP
+2019/10/17 03:05:43 Main: Join the group
+2019/10/17 03:05:43 AddNode(): Adding nodeID fa19-cs425-g73-01.cs.illinois.edu:20191017030543...
+2019/10/17 03:05:43 AddNode(): Successfully added!
+2019/10/17 03:05:43 Updater: New List is: 
+2019/10/17 03:05:43 [fa19-cs425-g73-01.cs.illinois.edu:20191017030543]
+2019/10/17 03:05:45 Main: Leave the group
+2019/10/17 03:05:45 dial UDP 127.0.0.1:8886: unknown network UDP
+2019/10/17 03:07:47 Main: Join the group
+2019/10/17 03:07:47 AddNode(): Adding nodeID fa19-cs425-g73-01.cs.illinois.edu:20191017030747...
+2019/10/17 03:07:47 AddNode(): Successfully added!
+2019/10/17 03:07:47 Updater: New List is: 
+2019/10/17 03:07:47 [fa19-cs425-g73-01.cs.illinois.edu:20191017030747]
+2019/10/17 03:07:50 Main: Leave the group
+2019/10/17 03:07:50 dial UDP :8886: unknown network UDP
+2019/10/17 03:10:16 Main: Join the group
+2019/10/17 03:10:16 AddNode(): Adding nodeID fa19-cs425-g73-01.cs.illinois.edu:20191017031016...
+2019/10/17 03:10:16 AddNode(): Successfully added!
+2019/10/17 03:10:16 Updater: New List is: 
+2019/10/17 03:10:16 [fa19-cs425-g73-01.cs.illinois.edu:20191017031016]
+2019/10/17 03:10:17 Main: Leave the group
+2019/10/17 03:10:17 Listener: Recieve Leave message from Node: fa19-cs425-g73-01.cs.illinois.edu:20191017031016
+2019/10/17 03:10:17 Listener: NodeID fa19-cs425-g73-01.cs.illinois.edu:20191017031016 is recognized as leave...
+2019/10/17 03:10:17 Listener: Return from HandleListenMsg 
+2019/10/17 03:10:17 HBListener: Received Message Type: Leave from fa19-cs425-g73-01.cs.illinois.edu:20191017031016...
+2019/10/17 03:10:17 Introducer: Introducer Leave... Close Port:8886...
+2019/10/17 03:10:24 Main: Join the group
+2019/10/17 03:10:24 AddNode(): Adding nodeID fa19-cs425-g73-01.cs.illinois.edu:20191017031024...
+2019/10/17 03:10:24 AddNode(): Successfully added!
+2019/10/17 03:10:24 Updater: New List is: 
+2019/10/17 03:10:24 [fa19-cs425-g73-01.cs.illinois.edu:20191017031016 fa19-cs425-g73-01.cs.illinois.edu:20191017031024]
+2019/10/17 03:10:24 listen udp :8886: bind: address already in use
