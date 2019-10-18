@@ -62,8 +62,8 @@ func ReadUDP(conn *net.UDPConn) (int, []byte){
 	return n,buf
 }
 
-func closeLocalPort(localID string, port string) {
-	leaveMsg := MP.NewMessage(MP.LeaveMsg, localID, []string{localID})
+func CloseLocalPort(nodeID string, port string) {
+	leaveMsg := MP.NewMessage(MP.LeaveMsg, nodeID, []string{nodeID})
 	leavePkg := MP.MsgToJSON(leaveMsg)
 
 	conn := BuildUDPClient("", port)
@@ -72,17 +72,3 @@ func closeLocalPort(localID string, port string) {
 	conn.Close()
 	fmt.Printf("Port %s Closed!!", port) 
 }
-
-
-func CloseConnPort(localID string) {
-	closeLocalPort(localID, MP.ConnPort)
-}
-
-func CloseIntroducePort(localID string) {
-	closeLocalPort(localID, MP.IntroducePort)
-}
-
-func CloseHBPort(localID string) {
-	closeLocalPort(localID, MP.HeartbeatPort)
-}
-

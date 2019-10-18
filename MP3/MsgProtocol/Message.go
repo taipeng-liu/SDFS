@@ -6,17 +6,6 @@ import (
 )
 
 const (
-	ConnHostName      = "fa19-cs425-g73-%02d.cs.illinois.edu"
-	ConnType          = "udp"
-	ConnPort          = "8888"
-	HeartbeatPort     = "8887"
-	IntroducePort     = "8886"
-	ConnlocalHost     = "localhost"
-	TimeOut           = 4100
-	IntroducerAddress = "fa19-cs425-g73-01.cs.illinois.edu"
-)
-
-const (
 	HeartbeatMsg = "Heartbeat"
 	JoinMsg      = "Join" //Content is empty
 	LeaveMsg     = "Leave"

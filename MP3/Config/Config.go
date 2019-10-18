@@ -5,7 +5,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	MP "../MsgProtocol"
+)
+
+const (
+	ConnHostName      = "fa19-cs425-g73-%02d.cs.illinois.edu"
+	ConnType          = "udp"
+	ConnPort          = "8888"
+	HeartbeatPort     = "8887"
+	IntroducePort     = "8886"
+	ConnlocalHost     = "localhost"
+	TimeOut           = 4100
+	IntroducerAddress = "fa19-cs425-g73-01.cs.illinois.edu"
 )
 
 func CreateID() string {
@@ -41,5 +51,5 @@ func GetVMNumber() int {
 
 func IsIntroducer() bool {
 	hostName := GetHostName()
-	return hostName == MP.IntroducerAddress
+	return hostName == IntroducerAddress
 }

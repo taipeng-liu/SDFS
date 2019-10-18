@@ -7,6 +7,7 @@ import (
 
 	MP "../MsgProtocol"
 	Conn "../Connection"
+	Config "../Config"
 )
 
 type Introducer struct{}
@@ -18,8 +19,7 @@ func (i *Introducer) NodeHandleJoin() {
 		return
 	}
 
-	fmt.Println("Introducer: Start Listening for New-Join Node...")
-	ln := Conn.BuildUDPServer(MP.IntroducePort)
+	ln := Conn.BuildUDPServer(Config.IntroducePort)
 
 	//Handle JoinMsg
 	for {
@@ -64,6 +64,6 @@ func HandleJoinMsg(ln *net.UDPConn) {
 		}
 		log.Printf("Introducer: JoinAck Sent to Node: %s...\n", joinMsg.NodeID)
 	} else if joinMsg.MessageType == MP.LeaveMsg {
-		log.Printf("Introducer: Introducer Leave... Close Port:%s...\n", MP.IntroducePort)
+		log.Printf("Introducer: Introducer Leave... Close Port:%s...\n", Config.IntroducePort)
 	}
 }

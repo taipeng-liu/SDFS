@@ -16,7 +16,7 @@ type Sender struct{}
 
 //Join the group
 func (s *Sender) SendJoin() {
-	joinSucceed := SendJoinMsg(MP.IntroducerAddress)
+	joinSucceed := SendJoinMsg(Config.IntroducerAddress)
 
 	if !joinSucceed {
 		fmt.Println("Introducer is down!!")
@@ -27,7 +27,7 @@ func SendJoinMsg(introducerAddress string) bool {
 	joinMsg := MP.NewMessage(MP.JoinMsg, LocalID, []string{})
 	joinPkg := MP.MsgToJSON(joinMsg)
 
-	conn := Conn.BuildUDPClient(introducerAddress, MP.IntroducePort)
+	conn := Conn.BuildUDPClient(introducerAddress, Config.IntroducePort)
 	defer conn.Close()
 	Conn.WriteToUDPConn(joinPkg, conn)
 	log.Println("Sender: JoinMsg Sent to Introducer...")
@@ -53,10 +53,10 @@ func SendJoinMsg(introducerAddress string) bool {
 func (s *Sender) SendLeave() {
 	isIntroducer := Config.IsIntroducer()
 	if isIntroducer {
-		Conn.CloseIntroducePort(LocalID)
+		Conn.CloseLocalPort(LocalID, Config.IntroducePort)
 	}
-	Conn.CloseHBPort(LocalID)
-	Conn.CloseConnPort(LocalID)
+	Conn.CloseLocalPort(LocalID, Config.HeartbeatPort)
+	Conn.CloseLocalPort(LocalID, Config.ConnPort)
 }
 
 func (s *Sender) SendHeartbeat() {
@@ -72,7 +72,7 @@ func (s *Sender) SendHeartbeat() {
 			for _, monitorID := range MonitorList {
 				monitorAddress := Config.GetIPAddressFromID(monitorID)
 
-				conn := Conn.BuildUDPClient(monitorAddress, MP.HeartbeatPort)
+				conn := Conn.BuildUDPClient(monitorAddress, Config.HeartbeatPort)
 				Conn.WriteToUDPConn(heartBeatPkg, conn)
 				//log.Printf("===HeartBeat Message Sent to Monitor: %s !!!\n", monitorID)
 				conn.Close()
@@ -91,7 +91,7 @@ func sendMsgToAllMonitors(msg MP.Message, predecessorID string, ln *net.UDPConn)
 		}
 		monitorAddress := Config.GetIPAddressFromID(monitorID)
 
-		udpAddr, err := net.ResolveUDPAddr(MP.ConnType, monitorAddress + ":" + MP.ConnPort)
+		udpAddr, err := net.ResolveUDPAddr(Config.ConnType, monitorAddress + ":" + Config.ConnPort)
 		if err != nil {
 			log.Println(err.Error())
 		}

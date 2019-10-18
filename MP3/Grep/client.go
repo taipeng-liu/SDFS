@@ -28,58 +28,6 @@ const (
 	unitTestNum = 3
 )
 
-func logCnt(cmd string) int {
-	// For Unit Test ToDo: Should Encapsulation better
-	f, fileErr := os.OpenFile("MP1_UnitTest.log",os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-	if fileErr != nil {
-		log.Println(fileErr)
-	}
-	defer f.Close()
-	myLogger := log.New(f, "==== Log File for MP1 : ", log.Ldate|log.Ltime|log.Lshortfile)
-	conn := make([]net.Conn, unitTestNum)
-	connErr := make([]error, unitTestNum)
-	
-	var totalLogCnt = 0
-
-	clientVMID, clientFileName := getClientInfo()
-		
-	for i := 0; i < unitTestNum; i++ {
-		// If it's client itself, use local grep instead of TCP 
-		if i + 1 == clientVMID {
-			continue
-		}
-		
-		//Set Hostname for connection
-		vmIPAddress := fmt.Sprintf(connHostName, i+1)
-		
-		//Connect to VM
-		conn[i], connErr[i] = net.Dial(connType, vmIPAddress+":"+connPort)
-		//Check error
-		if connErr[i] != nil {
-			conn[i] = nil
-			//conn[i], connErr[i] = net.Dial(connType, vmIPAddress+":"+connPort)
-			fmt.Println("==== Dial Error:", connErr[i].Error(), " Can't connect to: ", vmIPAddress, "====")
-		}
-		// Defer connection Close
-		if conn[i] != nil{
-			defer conn[i].Close()
-		}
-	}
-	for i := 0; i < unitTestNum; i++ {
-		if i + 1 == clientVMID {
-			_, lineCnt := dealClient(myLogger, cmd, i + 1, clientFileName)
-			totalLogCnt += lineCnt
-		}
-		if conn[i] == nil || connErr[i] != nil{
-			continue
-		}
-		fmt.Fprintf(conn[i], cmd + "\n")
-		//Listen from server
-		_, lineCnt := listen(myLogger, conn[i], i + 1)	
-		totalLogCnt += lineCnt
-	}
-	return totalLogCnt
-}
 
 
 func listen(logger *log.Logger, conn net.Conn, vmID int) (bool, int) {

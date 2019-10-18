@@ -14,7 +14,7 @@ type Listener struct {
 }
 
 func (l *Listener) RunMSGListener() {
-	ln := Conn.BuildUDPServer(MP.ConnPort)
+	ln := Conn.BuildUDPServer(Config.ConnPort)
 
 	for {
 		select {
@@ -86,7 +86,7 @@ func HBTimer(ln *net.UDPConn) {
 				timeDiff := curTime.Sub(lastTime)
 				_, ok := MayFailMap[NodeID]
 				if ok {
-					if int64(timeDiff)-MP.TimeOut*int64(time.Millisecond) > 0 {
+					if int64(timeDiff)-Config.TimeOut*int64(time.Millisecond) > 0 {
 						updateOk := UpdateMemshipList(MP.Message{MP.FailMsg, LocalID,[]string{NodeID}})
 						if updateOk {
 							log.Printf("HBTimer: %s timeout!! timeDiff is %s\n", NodeID, timeDiff.String())
@@ -95,7 +95,7 @@ func HBTimer(ln *net.UDPConn) {
 					}
 					delete(MayFailMap, NodeID)
 				} else {
-					if int64(timeDiff)-MP.TimeOut*int64(time.Millisecond) > 0 {
+					if int64(timeDiff)-Config.TimeOut*int64(time.Millisecond) > 0 {
 						MayFailMap[NodeID] = time.Now()
 					}
 				}
@@ -106,7 +106,7 @@ func HBTimer(ln *net.UDPConn) {
 
 func (l *Listener) RunHBListener() {
 
-	ln := Conn.BuildUDPServer(MP.HeartbeatPort)
+	ln := Conn.BuildUDPServer(Config.HeartbeatPort)
 	hbBuf := make([]byte, 2048)
 	go HBTimer(ln)
 	for {

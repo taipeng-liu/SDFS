@@ -52,7 +52,7 @@ func getListByRelateIndex(idxList []int) []string{
 	var newList []string
 	memListLen := len(MembershipList)
 	
-	if memListLen >= 4 {
+	if memListLen >= (len(idxList) + 1) {
 		for i, nodeID := range MembershipList {
 			if nodeID == LocalID{
 				for _, idx := range idxList {
