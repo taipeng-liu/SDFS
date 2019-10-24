@@ -39,7 +39,7 @@ func UpdateMemshipList(recvMsg MP.Message) bool {
 		updateOk = true
 		MembershipList = contents
 	case "Clear":
-		MembershipList = []string{""}
+		MembershipList = []string{}
 		updateOk = true
 	default:
 		updateOk = false
