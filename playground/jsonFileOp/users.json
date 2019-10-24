@@ -1,0 +1,13 @@
+{
+ "users": [
+  {
+   "name": "Taipeng",
+   "type": "Student",
+   "Age": 22,
+   "social": {
+    "facebook": "facebook/taipeng",
+    "twitter": "twitter/taipeng"
+   }
+  }
+ ]
+}

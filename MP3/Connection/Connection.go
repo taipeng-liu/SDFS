@@ -33,11 +33,13 @@ func BuildUDPClient(svAddr string, port string) *net.UDPConn{
 	}
 	udpAddr, err := net.ResolveUDPAddr("udp", addrPort)
 	if err != nil {
+		fmt.Println("BuildUDPClient: ResolveErr")
 		log.Println(err.Error())
 	}
 
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
+		fmt.Println("BuildUDPCLient: DialErr")
 		log.Println(err.Error())
 	}
 
@@ -57,13 +59,13 @@ func ReadUDP(conn *net.UDPConn) (int, []byte){
 	n, err := conn.Read(buf)
 	if err != nil {
 		log.Println(err.Error())
-		os.Exit(1)
+		return -1, []byte{}
 	}
 	return n,buf
 }
 
-func closeLocalPort(localID string, port string) {
-	leaveMsg := MP.NewMessage(MP.LeaveMsg, localID, []string{localID})
+func CloseLocalPort(nodeID string, port string) {
+	leaveMsg := MP.NewMessage(MP.LeaveMsg, nodeID, []string{nodeID})
 	leavePkg := MP.MsgToJSON(leaveMsg)
 
 	conn := BuildUDPClient("", port)
@@ -72,17 +74,3 @@ func closeLocalPort(localID string, port string) {
 	conn.Close()
 	fmt.Printf("Port %s Closed!!", port) 
 }
-
-
-func CloseConnPort(localID string) {
-	closeLocalPort(localID, MP.ConnPort)
-}
-
-func CloseIntroducePort(localID string) {
-	closeLocalPort(localID, MP.IntroducePort)
-}
-
-func CloseHBPort(localID string) {
-	closeLocalPort(localID, MP.HeartbeatPort)
-}
-
