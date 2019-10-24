@@ -15,12 +15,13 @@ import (
 type Sender struct{}
 
 //Join the group
-func (s *Sender) SendJoin() {
+func (s *Sender) SendJoin() bool{
 	joinSucceed := SendJoinMsg(Config.IntroducerAddress)
 
 	if !joinSucceed {
 		fmt.Println("Introducer is down!!")
 	}
+	return joinSucceed
 }
 
 func SendJoinMsg(introducerAddress string) bool {
@@ -35,6 +36,9 @@ func SendJoinMsg(introducerAddress string) bool {
 	//Set 3s Deadline for Ack
 	conn.SetReadDeadline(time.Now().Add(time.Duration(3) * time.Second))
 	n, joinAck := Conn.ReadUDP(conn)
+	if n == -1 {
+		return false
+	}
 	joinAckMsg := MP.JSONToMsg([]byte(string(joinAck[:n])))
 
 	log.Println("Sender: Checking joinAck from Introducer")
@@ -83,6 +87,20 @@ func (s *Sender) SendHeartbeat() {
 
 }
 
+func SendMsgToAddress(msg MP.Message, addr string, port string, ln *net.UDPConn) {
+	pkg := MP.MsgToJSON(msg)
+	udpAddr, err := net.ResolveUDPAddr("udp", addr + ":" + port)
+	if err != nil {
+		log.Println(err.Error())
+	}
+	
+	_, wErr := ln.WriteToUDP(pkg, udpAddr)
+	if wErr != nil {
+		log.Println(wErr.Error())
+	}
+	log.Printf("Sender: Sent %s to %s...\n",msg.MessageType, addr)
+}
+
 func sendMsgToAllMonitors(msg MP.Message, predecessorID string, ln *net.UDPConn) {
 	pkg := MP.MsgToJSON(msg)
 	for _, monitorID := range MonitorList {
@@ -90,6 +108,8 @@ func sendMsgToAllMonitors(msg MP.Message, predecessorID string, ln *net.UDPConn)
 			continue
 		}
 		monitorAddress := Config.GetIPAddressFromID(monitorID)
+
+		//SendMsgToAddress(msg, monitorAddress, Config.ConnPort, ln)
 
 		udpAddr, err := net.ResolveUDPAddr(Config.ConnType, monitorAddress + ":" + Config.ConnPort)
 		if err != nil {
@@ -102,7 +122,6 @@ func sendMsgToAllMonitors(msg MP.Message, predecessorID string, ln *net.UDPConn)
 		}
 		log.Printf("Sender:Sent %s to Monitor: %s...\n", msg.MessageType, monitorID)
 	}
-
 }
 
 func sendMsg(ln *net.UDPConn, preID string, msgType string, contentID string) {

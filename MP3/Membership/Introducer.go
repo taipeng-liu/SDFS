@@ -13,13 +13,61 @@ import (
 type Introducer struct{}
 
 func (i *Introducer) NodeHandleJoin() {
+	//Get old membertable up to last leave/fail
+	Memtable, err := ReadMemtableFromJsonFile("Config/Memtable.json")
+	if err!= nil {
+		log.Fatal("Unable to get old Memtable", err)
+	}
+
+	//Create a rejoin msg
+	rejoinMsg := MP.NewMessage(MP.IntroducerRejoinMsg, LocalID, []string{""})	
+	rejoinPkg := MP.MsgToJSON(rejoinMsg)
+	var oldGroupExist bool
+
+	//Try to rejoin by iterating oldMemtable
+	for _, oldMemberID := range Memtable {
+		//TODO: Try to connect oldMember and get up-to-date memtable
+
+		oldMemberAddr := Config.GetIPAddressFromID(oldMemberID)
+
+		conn := Conn.BuildUDPClient(oldMemberAddr, Config.ConnPort)
+		defer conn.Close()
+
+		Conn.WriteToUDPConn(rejoinPkg, conn)
+
+		n, joinAck := Conn.ReadUDP(conn)
+		if n == -1 {
+			fmt.Printf("OldMember %s is down, try next one...", oldMemberID)
+			continue
+		} else {
+			joinAckMsg := MP.JSONToMsg([]byte(string(joinAck[:n])))
+			if joinAckMsg.MessageType == MP.JoinAckMsg{
+				oldGroupExist = true
+				UpdateMemshipList(joinAckMsg)
+				fmt.Println("Found old group!")
+			}
+		}
+	}
+
+	
+
 	//Add Introducer itself to MemList
-	ok := AddNode(LocalID)
+	ok := UpdateMemshipList(MP.Message{MP.JoinMsg,LocalID,[]string{""}})
 	if !ok {
+		log.Fatal("Unable add Introducer itself to Memtable", err)
 		return
+	}
+	
+	err = WriteMemtableToJsonFile("Config/Memtable.json")
+	if err != nil {
+		log.Println("Writing to JsonFile is unable")
 	}
 
 	ln := Conn.BuildUDPServer(Config.IntroducePort)
+
+	if oldGroupExist {
+		SendIntroduceMsg(ln, "", LocalID)
+	}
 
 	//Handle JoinMsg
 	for {
@@ -53,6 +101,7 @@ func HandleJoinMsg(ln *net.UDPConn) {
 		SendIntroduceMsg(ln, "", joinMsg.NodeID)
 
 		UpdateMemshipList(joinMsg)
+		WriteMemtableToJsonFile("Config/Memtable.json")
 
 		//Send full membershiplist to new join node
 		joinAckMsg := MP.NewMessage(MP.JoinAckMsg, LocalID, MembershipList)

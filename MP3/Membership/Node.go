@@ -40,15 +40,19 @@ func RunNode(isIntroducer bool) {
 	fmt.Println("Node: Local Address is: " + LocalAddress)
 	Status = true
 
-	go curNode.Listener.RunMSGListener()
+	
 	if !isIntroducer {
 		//Non-intro send JoinMsg to Introducer
-		curNode.Sender.SendJoin()
+		joinOK := curNode.Sender.SendJoin()
+		if !joinOK {
+			fmt.Println("Unable to join")
+			return
+		}
 	} else {
 		//Introducer receive JoinMsg from non-intro
 		go curNode.Introducer.NodeHandleJoin()
 	}
-
+	go curNode.Listener.RunMSGListener()
 	go curNode.Listener.RunHBListener()
 	go curNode.Sender.SendHeartbeat()
 }

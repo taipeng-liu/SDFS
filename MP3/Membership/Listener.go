@@ -32,7 +32,7 @@ func HandleListenMsg(conn *net.UDPConn) {
 
 	msgBuf := make([]byte, 1024)
 
-	n, _, err := conn.ReadFromUDP(msgBuf)
+	n, senderAddr, err := conn.ReadFromUDP(msgBuf)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,6 +48,9 @@ func HandleListenMsg(conn *net.UDPConn) {
 		if updateOk {
 			log.Printf("Listener: NodeID %s is recognized as leave...\n", contents[0])
 			SendLeaveMsg(conn, senderID, contents[0])
+			if Config.IsIntroducer() {
+				WriteMemtableToJsonFile("Config/Memtable.json")
+			}
 		}
 	case MP.IntroduceMsg:
 		updateOk := UpdateMemshipList(receivedMsg)	
@@ -61,12 +64,20 @@ func HandleListenMsg(conn *net.UDPConn) {
 			if updateOk {
 				log.Printf("Listener: NodeID %s is detected as fail...\n", contents[0])
 				SendFailMsg(conn, senderID, contents[0])
+				if Config.IsIntroducer() {
+					WriteMemtableToJsonFile("Config/Memtable.json")
+				}
 			}
 		} else {
 			go StopNode()
 			time.Sleep(3*time.Second)
 			go RunNode(Config.IsIntroducer())
 		}
+	case MP.IntroducerRejoinMsg:
+		joinAckMsg := MP.NewMessage(MP.JoinAckMsg, LocalID, MembershipList)
+		joinAckPkg := MP.MsgToJSON(joinAckMsg)
+		
+		conn.WriteToUDP(joinAckPkg, senderAddr)
 	default:
 		fmt.Println("===Listener:Can't recognize the msg")
 	}
@@ -91,6 +102,9 @@ func HBTimer(ln *net.UDPConn) {
 						if updateOk {
 							log.Printf("HBTimer: %s timeout!! timeDiff is %s\n", NodeID, timeDiff.String())
 							SendFailMsg(ln, "", NodeID)
+							if Config.IsIntroducer() {
+								WriteMemtableToJsonFile("Config/Memtable.json")
+							}
 						}
 					}
 					delete(MayFailMap, NodeID)

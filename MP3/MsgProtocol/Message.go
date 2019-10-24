@@ -12,6 +12,7 @@ const (
 	FailMsg      = "Fail"
 	IntroduceMsg = "Introduce" // Content will include new-join node's ID
 	JoinAckMsg   = "JoinAck"   // Content will include full membership list
+	IntroducerRejoinMsg = "IntroducerRejoin" //Content is empty
 )
 
 type Message struct {
