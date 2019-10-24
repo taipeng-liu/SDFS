@@ -63,9 +63,9 @@ func StopNode() {
 	KillMsgListener <- struct{}{}
 	KillHBSender <- struct{}{}
 
-	if Config.IsIntroducer() {
-		KillIntroducer <- struct{}{}
-	}
+	//if Config.IsIntroducer() {
+	//	KillIntroducer <- struct{}{}
+	//}
 	Status = false
 
 	//When Leave, Clear all elements
