@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"io/ioutil"
+	"os"
 
 	MP "../MsgProtocol"
 )
@@ -57,7 +58,21 @@ func WriteMemtableToJsonFile(fileAddr string) error{
 }
 
 func ReadMemtableFromJsonFile(fileAddr string) ([]string, error){
-	return []string{""},nil
+	jsonFile, err := os.Open(fileAddr)
+	if err != nil {
+		log.Println(err)
+		return []string{},err
+	}
+
+	defer jsonFile.Close()
+
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	
+	var oldMemtable []string
+
+	json.Unmarshal(byteValue, &oldMemtable)
+
+	return oldMemtable, nil
 }
 
 

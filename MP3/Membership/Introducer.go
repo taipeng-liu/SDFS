@@ -22,13 +22,15 @@ func (i *Introducer) NodeHandleJoin() {
 	//Create a rejoin msg
 	rejoinMsg := MP.NewMessage(MP.IntroducerRejoinMsg, LocalID, []string{""})	
 	rejoinPkg := MP.MsgToJSON(rejoinMsg)
-	var oldGroupExist bool
+	var oldGroupExist bool = false
 
 	//Try to rejoin by iterating oldMemtable
 	for _, oldMemberID := range Memtable {
-		//TODO: Try to connect oldMember and get up-to-date memtable
 
 		oldMemberAddr := Config.GetIPAddressFromID(oldMemberID)
+		if oldMemberAddr == LocalAddress {
+			continue
+		}
 
 		conn := Conn.BuildUDPClient(oldMemberAddr, Config.ConnPort)
 		defer conn.Close()
@@ -37,7 +39,7 @@ func (i *Introducer) NodeHandleJoin() {
 
 		n, joinAck := Conn.ReadUDP(conn)
 		if n == -1 {
-			fmt.Printf("OldMember %s is down, try next one...", oldMemberID)
+			fmt.Printf("OldMember %s is down, try next one...\n", oldMemberID)
 			continue
 		} else {
 			joinAckMsg := MP.JSONToMsg([]byte(string(joinAck[:n])))
@@ -46,6 +48,7 @@ func (i *Introducer) NodeHandleJoin() {
 				UpdateMemshipList(joinAckMsg)
 				fmt.Println("Found old group!")
 			}
+			break
 		}
 	}
 
@@ -54,7 +57,7 @@ func (i *Introducer) NodeHandleJoin() {
 	//Add Introducer itself to MemList
 	ok := UpdateMemshipList(MP.Message{MP.JoinMsg,LocalID,[]string{""}})
 	if !ok {
-		log.Fatal("Unable add Introducer itself to Memtable", err)
+		log.Fatal("Unable to add Introducer itself to Memtable", err)
 		return
 	}
 	
@@ -70,21 +73,21 @@ func (i *Introducer) NodeHandleJoin() {
 	}
 
 	//Handle JoinMsg
+	var stop bool = false
 	for {
-		select {
-		case <-KillIntroducer:
+		if stop {
 			ln.Close()
 			fmt.Println("====Introducer: Leave!!")
 			return
-		default:
+		} else {
 			fmt.Println("====Introducer: Waiting for new join...")
-			HandleJoinMsg(ln)
+			HandleJoinMsg(ln, &stop)
 		}
 	}
 
 }
 
-func HandleJoinMsg(ln *net.UDPConn) {
+func HandleJoinMsg(ln *net.UDPConn, stop *bool) {
 	joinBuf := make([]byte, 1024)
 	n, joinAddr, err := ln.ReadFromUDP(joinBuf)
 	if err != nil {
@@ -113,6 +116,7 @@ func HandleJoinMsg(ln *net.UDPConn) {
 		}
 		log.Printf("Introducer: JoinAck Sent to Node: %s...\n", joinMsg.NodeID)
 	} else if joinMsg.MessageType == MP.LeaveMsg {
+		*stop = true
 		log.Printf("Introducer: Introducer Leave... Close Port:%s...\n", Config.IntroducePort)
 	}
 }
