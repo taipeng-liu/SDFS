@@ -8,6 +8,11 @@ import (
 )
 
 const (
+	LocalfilePath     = "SDFS/localFile"
+	SdfsfilePath      = "SDFS/sdfsFile"
+)
+
+const (
 	ConnHostName      = "fa19-cs425-g73-%02d.cs.illinois.edu"
 	ConnType          = "udp"
 	ConnPort          = "8888"

@@ -6,13 +6,22 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
+
 	Mem "./Membership"
 	Config "./Config"
+	Sdfs "./SDFS"
 )
+
+func Parse (cmd string) []string{
+	cmd = cmd[ : len(cmd)-1]
+	cmd = strings.Join(strings.Fields(cmd), " ")
+	return strings.Split(cmd, " ")
+}
 
 func main() {
 	vmNumber := Config.GetVMNumber()
-	logFile, err := os.OpenFile("MP2_"+strconv.Itoa(vmNumber)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	logFile, err := os.OpenFile("MP3_"+strconv.Itoa(vmNumber)+".log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("error opening file: %v", err)
 	}
@@ -25,23 +34,45 @@ func main() {
 	reader := bufio.NewReader(os.Stdin)
 
 	for {
-		var cmd string
 		fmt.Println("Please type your command:")
-		cmd, _ = reader.ReadString('\n')
+		cmd, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Reading error: ", err.Error())
+			return
+		}
 
-		switch cmd {
-		case "Join\n":
+		parsedcmd := Parse(cmd)
+
+		switch parsedcmd[0] {
+		case "Join":
 			log.Println("Main: Join the group")
 			go Mem.RunNode(isIntroducer)
-		case "Leave\n":
+			go Sdfs.RunDatanodeServer(Config.DatanodePort) //"SDFS/DatanodeServer.go"
+			//TODO Decide when and where run Namenode Server???
+		case "Leave":
 			log.Println("Main: Leave the group")
 			go Mem.StopNode()
-		case "List\n":
+		case "List":
 			log.Println("Main: Show the current Membership List")
 			go Mem.ShowList()
-		case "ID\n":
+		case "ID":
 			log.Println("Main: Show the current Node ID")
 			go Mem.ShowID()
+		case "put":
+			log.Println("Main: Put localfilename sdfsfilename")
+			go Sdfs.PutFile(parsedcmd[1:]) //"SDFS/client.go"
+		case "get":
+			log.Println("Main: Get sdfsfilename localfilename")
+			go Sdfs.GetFile(parsedcmd[1:]) //"SDFS/client.go"
+		case "delete":
+			log.Println("Main: Delete sdfsfile")
+			go Sdfs.DeleteFile(parsedcmd[1:]) //"SDFS/client.go"
+		case "ls":
+			log.Println("Main: List all servers who save the file")
+			go Sdfs.ShowDatanode(parsedcmd[1:]) //"SDFS/client.go"
+		case "store":
+			log.Println("Main: Show all files")
+			go Sdfs.ShowFile()     //"SDFS/client.go"
 		default:
 			log.Println("Main: Don't support this command")
 		}
