@@ -209,9 +209,7 @@ func PutFile(filenames []string){
 
 	var respCount int 
 
-	datanodeList = []string{"fa19-cs425-g73-02.cs.illinois.edu:20191024100241",
-				"fa19-cs425-g73-03.cs.illinois.edu:20191024100004",
-				"fa19-cs425-g73-04.cs.illinois.edu:20191024100151"}
+	datanodeList = []string{"fa19-cs425-g73-02.cs.illinois.edu:20191024100241"}
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
@@ -219,7 +217,7 @@ func PutFile(filenames []string){
 		go PutFileAt(localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, &respCount)
 	}
 
-	for (respCount < W) {
+	for (respCount < 1) { //TODO: modify back to W
 		//Waiting for W response(s)
 		//Check the condition every second
 		//TODO: Set up timeout in case of no response causing forever waiting
