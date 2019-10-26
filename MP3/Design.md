@@ -30,16 +30,16 @@ Not Decided     -> RunNamenodeServer    at namenode.go
 "put lfn sfn"   -> PutFile              at client.go
 "get sfn lfn"   -> GetFile		at client.go
 "delete sfn"    -> DeleteFile		at client.go
-"ls"            -> ShowDatanode 	at client.go
+"ls sdf"        -> ShowDatanode 	at client.go
 "store"         -> ShowFile		at client.go
 ```
 
 #### client.go
 ```
-PutFile		-> client.GetDatanodeList	-> client.Put//TODO
-GetFile		-> client.GetDatanodeList	-> client.Get//TODO
-DeleteFile	-> client.GetDatanodeList	-> client.Delete//TODO
-ShowDatanode	-> client.GetDatanodeList 	-> print the list
+PutFile		-> Client.GetDatanodeList	-> PutFileAt 	-> Client.Put//TODO
+GetFile		-> Client.GetDatanodeList	-> GetFileAt	-> Client.Get//TODO
+DeleteFile	-> Client.GetDatanodeList	-> DeleteFileAt	-> Client.Delete//TODO
+ShowDatanode	-> Client.GetDatanodeList 	-> print the list
 ShowFile	-> listFile(Config.LocalfilePath) & listFile(Config.SdfsfilePath)
 
 listFile
@@ -48,18 +48,20 @@ GetDatanodeList -> Namenode.GetDatanodeList	-> return DatanodeList
 
 #### namenode.go
 ```
-GetDatanodeList //TODO
+Namenode.GetDatanodeList //TODO
+
+Namenode.InsertFile //TODO
 
 RunNamenodeServer //TODO
 ```
 #### datanode.go
 ```
-Put 	//TODO
-Get 	//TODO
-Delete	//TODO
-Find	//TODO
+Datanode.Put 	//TODO
+Datanode.Get 	//TODO
+Datanode.Delete	//TODO
+Datanode.Find	//TODO
 
-RunNamenodeServer
+RunDatanodeServer
 ```
 #### typeDef.go
 ```
@@ -76,7 +78,7 @@ Client: Addr string
 
 Namenode: Filemap map[string][]string (E.g. Filemap["vm1.log"] = {"NodeID1", "NodeID2", "NodeID3"})
 
-Datanode: (none)
+Datanode: NamenodeAddr string //Every datanode knows who is namenode
 
 Block: 	Idx int
 	Size int
@@ -89,6 +91,10 @@ FileInfo: Filename string
 FindRequest: Filename string
 
 FindResponse: DatanodeList []string
+
+InsertRequest: Filename string
+
+InsertResponse: DatanodeList []string
 
 PutRequest: Fileinfo  FileInfo
 	    Block     Block
