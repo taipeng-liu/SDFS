@@ -26,7 +26,7 @@ func (d *Datanode) GetSdfsfileList(req string, resp *[]string) error{
 }
 
 func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
-	//TODO
+	sdfsfilepath := Config
 	return nil
 }
 

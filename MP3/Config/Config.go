@@ -12,7 +12,7 @@ const (
 	SdfsfileDir       = "SDFS/sdfsFile"
 	DatanodePort      = "8885"
 	NamenodePort      = "8884"
-	BLOCK_SIZE        =  512
+	BLOCK_SIZE        =  512 * 1024
 )
 
 const (
@@ -25,6 +25,14 @@ const (
 	TimeOut           = 4100
 	IntroducerAddress = "fa19-cs425-g73-01.cs.illinois.edu"
 )
+
+func GetLocalfilePath(localfilename string) string {
+	return LocalfileDir + "/" + localfilename
+}
+
+func GetSdfsfilePath(sdfsfilename string) string {
+	return SdfsfileDir + "/" + sdfsfilename
+}
 
 func CreateID() string {
 	hostName := GetHostName()
