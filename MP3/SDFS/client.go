@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"time"
+	"os"
 
 	Config "../Config"
 )
@@ -57,16 +58,58 @@ func (c *Client) InsertFile(filename string) ([]string, int) {
 }
 
 
-func (c *Client) Put(localfilename string) (error, string) (
-	//TODO
-	//Get filepath
-	//Open file and read in buf[BLOCK_SIZE]
-	//Create FileInfo and Block
-	//Send putrequest
-	//iterate the above precedures until read EOF
-	localfilepath := Config.LocalfileDir + "/" + localfilename
-	
-	
+func (c *Client) Put(localfilename string, sdfsfilename string) error(
+
+	localfilepath := Config.GetLocalfilePath(localfilename)
+
+	//Get filesize and total blocks	
+	fileStat, err := os.Stat(localfilepath)
+	if err != nil {
+		return err
+	}
+
+	fileSize := fileStat.Size()
+
+	totalblock := int(fileSize/BLOCK_SIZE)
+	if fileSize%BLOCK_SIZE != 0 {
+		totalblock += 1
+	}
+
+	fi := FileInfo{Filename   : sdfsfilename
+		       Filesize   : fileSize
+		       Totalblock : totalblock}
+
+	//Open the file
+	localfile, err := os.Open(localfilepath)
+	if err != nil {
+		log.Printf("os.Open() can't open file %s", localfilepath)
+		return err
+	}
+	defer localfile.Close()
+
+	//Send file by blocks
+	buf := make([]byte, BLOCK_SIZE)
+	for blockIdx := 0; blockIdx < totalblock; blockIdx++ {
+		n, err := localfile.ReadAt(buf, int64(blockIdx)*BLOCK_SIZE)
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		block := Block{Idx    : blockIdx
+			       Size   : n
+			       Content: buf}
+		req := PutRequest{Fileinfo : fi
+				  Block    : block}
+
+		var res PutResponse
+		if err := c.rpcClient.Call("Datanode.Put", req, &res); err != nil{
+			return err
+		}
+
+		if res.Err != nil {
+			return res.Err
+		}
+	}
 }
 
 func (c *Client) Get() () {
@@ -93,11 +136,11 @@ func listFile(dirPath string) {
 	}
 }
 
-func PutFileAt(localfilename string, addr string, port string, respCountPt *int){
+func PutFileAt(localfilename string, sdfsfilename string, addr string, port string, respCountPt *int){
 	client := NewClient(addr + ":" + port)
 	client.Dial()
 
-	client.Put(localfilename)
+	client.Put(localfilename, sdfsfilename)
 	(*respCountPt)++          //TODO: This line is a critical section, use mutex
 
 	client.Close()
@@ -134,12 +177,19 @@ func PutFile(filenames []string){
 	localfilename := filenames[0]
 	sdfsfilename  := filenames[1]
 
+	//Check if localfile exists
+	localfilePath := Config.GetLocalfilePath(localfilename)
+	if _, err := os.Stat(localfilePath); os.IsNotExist(err) {
+		fmt.Printf("%s dose not exsit!\n", localfilePath)
+		return
+	}
+
 	namenodeAddr := GetNamenodeAddr()
 	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
 	client.Dial()
 
 	//RPC Namenode
-	//Check if the file already exist
+	//Check if sdfsfile exist
 	datanodeList, n := client.GetDatanodeList(sdfsfilename)
 
 	if n == 0 {
@@ -159,7 +209,7 @@ func PutFile(filenames []string){
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
 		//Question: Synchronizely uploading?
-		go PutFileAt(localfilename, datanodeAddr, Config.DatanodePort, &respCount)
+		go PutFileAt(localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, &respCount)
 	}
 
 	while respCount < W {
