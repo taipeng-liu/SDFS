@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/rpc"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"time"
 	"os"
@@ -58,7 +59,7 @@ func (c *Client) InsertFile(filename string) ([]string, int) {
 }
 
 
-func (c *Client) Put(localfilename string, sdfsfilename string) error(
+func (c *Client) Put(localfilename string, sdfsfilename string) error{
 
 	localfilepath := Config.GetLocalfilePath(localfilename)
 
@@ -70,14 +71,14 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error(
 
 	fileSize := fileStat.Size()
 
-	totalblock := int(fileSize/BLOCK_SIZE)
-	if fileSize%BLOCK_SIZE != 0 {
+	totalblock := int(fileSize/Config.BLOCK_SIZE)
+	if fileSize%Config.BLOCK_SIZE != 0 {
 		totalblock += 1
 	}
 
-	fi := FileInfo{Filename   : sdfsfilename
-		       Filesize   : fileSize
-		       Totalblock : totalblock}
+	fi := FileInfo{Filename   : sdfsfilename,
+		       Filesize   : fileSize,
+		       Totalblock : totalblock,}
 
 	//Open the file
 	localfile, err := os.Open(localfilepath)
@@ -88,21 +89,21 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error(
 	defer localfile.Close()
 
 	//Send file by blocks
-	buf := make([]byte, BLOCK_SIZE)
+	buf := make([]byte, Config.BLOCK_SIZE)
 	for blockIdx := 0; blockIdx < totalblock; blockIdx++ {
-		n, err := localfile.ReadAt(buf, int64(blockIdx)*BLOCK_SIZE)
+		n, err := localfile.ReadAt(buf, int64(blockIdx)*Config.BLOCK_SIZE)
 		if err != nil && err != io.EOF {
 			return err
 		}
 
-		block := Block{Idx    : blockIdx
-			       Size   : n
-			       Content: buf}
-		req := PutRequest{Fileinfo : fi
-				  Block    : block}
+		block := Block{Idx    : blockIdx,
+			       Size   : int64(n),
+			       Content: buf[:n],}//TODO: Test: n or n+1
+		req := PutRequest{FileInfo : fi,
+				  Block    : block,}
 
 		var res PutResponse
-		if err := c.rpcClient.Call("Datanode.Put", req, &res); err != nil{
+		if err = c.rpcClient.Call("Datanode.Put", req, &res); err != nil{
 			return err
 		}
 
@@ -110,6 +111,8 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error(
 			return res.Err
 		}
 	}
+
+	return nil
 }
 
 func (c *Client) Get() () {
@@ -206,17 +209,21 @@ func PutFile(filenames []string){
 
 	var respCount int 
 
+	datanodeList = []string{"fa19-cs425-g73-02.cs.illinois.edu:20191024100241",
+				"fa19-cs425-g73-03.cs.illinois.edu:20191024100004",
+				"fa19-cs425-g73-04.cs.illinois.edu:20191024100151"}
+
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
 		//Question: Synchronizely uploading?
 		go PutFileAt(localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, &respCount)
 	}
 
-	while respCount < W {
+	for (respCount < W) {
 		//Waiting for W response(s)
 		//Check the condition every second
 		//TODO: Set up timeout in case of no response causing forever waiting
-		time.Sleep(time.Second())
+		time.Sleep(time.Second)
 	}
 	
 	client.Close()
@@ -227,7 +234,7 @@ func PutFile(filenames []string){
 
 func GetFile(filenames []string){
 
-	localfilename := filenames[1]
+	//localfilename := filenames[1]
 	sdfsfilename  := filenames[0]
 
 	namenodeAddr := GetNamenodeAddr()
@@ -237,6 +244,7 @@ func GetFile(filenames []string){
 	//RPC Namenode
 	//Namenode send back datanodes who is currently storing the file
 	datanodeList, n := client.GetDatanodeList(sdfsfilename)
+	fmt.Println(datanodeList)
 
 	if n > 0 {
 		//Exist
@@ -269,6 +277,7 @@ func DeleteFile(filenames []string){
 	//RPC each datanode from the list
 	for _, datanodeID := range datanodeList{
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
+		fmt.Println(datanodeAddr)
 		//TODO RPC datanode
 	}
 	//TODO: When ALL datanodes send finished, return

@@ -2,13 +2,13 @@ package sdfs
 
 type Block struct {
 	Idx      int
-	Size     int
+	Size     int64
 	Content  []byte
 }
 
 type FileInfo struct {
 	Filename    string
-	Filesize    int
+	Filesize    int64
 	Totalblock  int
 }
 
@@ -29,7 +29,7 @@ type InsertResponse struct {
 }
 
 type PutRequest struct {
-	Fileinfo  FileInfo
+	FileInfo  FileInfo
 	Block     Block
 }
 
