@@ -5,13 +5,14 @@ import (
 	"net/rpc"
 	"fmt"
 	"io/ioutil"
+	"time"
 
 	Config "../Config"
 )
 
 const (
 	R = 1
-	W = 4
+	W = 3
 )
 
 type Client struct {
@@ -44,6 +45,32 @@ func (c *Client) GetDatanodeList(filename string) ([]string, int) {
 	}
 
 	return res.DatanodeList, len(res.DatanodeList)
+}
+
+func (c *Client) InsertFile(filename string) ([]string, int) {
+	var res InsertResponse
+	if err := c.rpcClient.Call("Namenode.InsertFile", InsertRequest{Filename: filename}, &res); err != nil{
+		return []string{}, 0
+	}
+
+	return res.DatanodeList, len(res.DatanodeList)
+}
+
+
+func (c *Client) Put(filename string) (error, string) (
+	//TODO
+	//Open file and read in buf[BLOCK_SIZE]
+	//Create FileInfo and Block
+	//Send putrequest
+	//iterate the above precedures until read EOF
+}
+
+func (c *Client) Get() () {
+	//TODO
+}
+
+func (c *Client) Delete() () {
+	//TODO
 }
 
 ///////////////////////////////////Helper functions/////////////////////////////////////////
@@ -86,6 +113,15 @@ func listFile(dirPath string) {
 	}
 }
 
+func PutFileAt(filename string, addr string, port string, respCountPt *int){
+	client := NewClient(addr + ":" + port)
+	client.Dial()
+
+	client.Put(filename)
+	(*respCountPt)++          //TODO: This line is a critical section, use mutex
+
+	client.Close()
+}
 
 /////////////////////Functions Called from main.go////////////////////////
 
@@ -101,17 +137,37 @@ func PutFile(filenames []string){
 	//Check if the file already exist
 	datanodeList, n := client.GetDatanodeList(sdfsfilename)
 
-	if n > 0 {
-		//Exist
-		//TODO: Update sdfsfile by localfile
-		//RPC each Datanode from the list
-		//When W datanode(s) send finished, return
-	} else {
+	if n == 0 {
 		//Not exist
-		//TODO: Insert localfile into sdfsfile
-		//RPC each Datanode from the list
-		//When W datanode(s) send finished, return
-	}	
+		datanodeList, n = client.InsertFile(sdfsfilename)
+		if n == 0 {
+			log.Println("====Insert sdfsfile error")
+			return
+		}
+	}
+
+	//RPC each Datanode from the list
+	//When W datanode(s) send finished, return
+
+	var respCount int 
+
+	for _, datanodeID := range datanodeList {
+		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
+		//Question: Is goroutine applicable for synchronizely uploading?
+		go PutFileAt(localfilename, datanodeAddr, Config.DatanodePort, &respCount)
+	}
+
+	while respCount < W {
+		//Waiting for W response(s)
+		//TODO
+		//Set up time out in case of no response causing forever waiting
+		time.Sleep(time.Second())
+	}
+	
+	client.Close()
+
+	log.Println("PutFile successfully return")
+	return
 }
 
 func GetFile(filenames []string){
@@ -134,6 +190,8 @@ func GetFile(filenames []string){
 		//Not exist
 		fmt.Printf("Get error: no such sdfsfile %s\n", sdfsfilename)
 	}
+
+	client.Close()
 }
 
 func DeleteFile(filenames []string){

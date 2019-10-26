@@ -20,6 +20,14 @@ type FindResponse struct {
 	DatanodeList []string
 }
 
+type InsertRequest struct {
+	Filename string
+}
+
+type InsertResponse struct {
+	DatanodeList []string
+}
+
 type PutRequest struct {
 	Fileinfo  FileInfo
 	Block     Block

@@ -16,6 +16,16 @@ func (n *Namenode) GetDatanodeList (req *FindRequest, resp *FindResponse) error 
 	return nil
 }
 
+func (n *Namenode) InsertFile (req *InsertRequest, resp *InsertResponse) error {
+	//TODO
+	//Figure out the value of Filamap[sdfsfilename]
+	//i.e. find datanodes who should save the file
+	//Insert pair (sdfsfilename, datanodeList) into Filemap
+	//Send datanodeList back to InsertResponse
+	return nil
+}
+
+
 func (n *Namenode) Add() {
 	//TODO
 	//add a new item into filemap
