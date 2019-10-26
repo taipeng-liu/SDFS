@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	LocalfilePath     = "SDFS/localFile"
-	SdfsfilePath      = "SDFS/sdfsFile"
+	LocalfileDir      = "SDFS/localFile"
+	SdfsfileDir       = "SDFS/sdfsFile"
 	DatanodePort      = "8885"
 	NamenodePort      = "8884"
 	BLOCK_SIZE        =  512

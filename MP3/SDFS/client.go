@@ -57,12 +57,16 @@ func (c *Client) InsertFile(filename string) ([]string, int) {
 }
 
 
-func (c *Client) Put(filename string) (error, string) (
+func (c *Client) Put(localfilename string) (error, string) (
 	//TODO
+	//Get filepath
 	//Open file and read in buf[BLOCK_SIZE]
 	//Create FileInfo and Block
 	//Send putrequest
 	//iterate the above precedures until read EOF
+	localfilepath := Config.LocalfileDir + "/" + localfilename
+	
+	
 }
 
 func (c *Client) Get() () {
@@ -75,31 +79,6 @@ func (c *Client) Delete() () {
 
 
 ///////////////////////////////////Helper functions/////////////////////////////////////////
-
-/*
-func RequestDatanode(reqType string, request Request, datanodeAddr string, port string) Response{
-	var response Response
-	
-	client, err := rpc.DailHTTP("tcp", datanodeAddr + ":" + port)
-	if err != nil {
-		log.Fatal("Connection error: ", err)
-	}
-	
-	switch reqType {
-		case "put":
-			client.Call("Datanode.Put", request, &response)
-		case "get":
-			client.Call("Datanode.Get", request, &response)
-		case "delete":
-			client.Call("Datanode.Delete", request, &response)
-		default:
-			fmt.Println("Unsupported request type!")
-	}
-
-	return response
-}
-*/
-
 
 func listFile(dirPath string) {
 	fmt.Printf("%s contains following files:\n", dirPath)
@@ -114,11 +93,11 @@ func listFile(dirPath string) {
 	}
 }
 
-func PutFileAt(filename string, addr string, port string, respCountPt *int){
+func PutFileAt(localfilename string, addr string, port string, respCountPt *int){
 	client := NewClient(addr + ":" + port)
 	client.Dial()
 
-	client.Put(filename)
+	client.Put(localfilename)
 	(*respCountPt)++          //TODO: This line is a critical section, use mutex
 
 	client.Close()
@@ -186,7 +165,7 @@ func PutFile(filenames []string){
 	while respCount < W {
 		//Waiting for W response(s)
 		//Check the condition every second
-		//TODO: Set up time out in case of no response causing forever waiting
+		//TODO: Set up timeout in case of no response causing forever waiting
 		time.Sleep(time.Second())
 	}
 	
@@ -224,16 +203,16 @@ func GetFile(filenames []string){
 func DeleteFile(filenames []string){
 	//RPC Namenode
 	//Namenode send back datanodes who save the file
-	toDelete := filenames[0]
+	sdfsfilename := filenames[0]
 
 	namenodeAddr := GetNamenodeAddr()
 	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
 	client.Dial()
 
-	datanodeList, n := client.GetDatanodeList(toDelete)
+	datanodeList, n := client.GetDatanodeList(sdfsfilename)
 
 	if n == 0 {
-		fmt.Printf("Delete error: no such sdfsfile %s\n", toDelete)
+		fmt.Printf("Delete error: no such sdfsfile %s\n", sdfsfilename)
 	}
 
 
@@ -251,20 +230,20 @@ func DeleteFile(filenames []string){
 func ShowDatanode(filenames []string){
 	//RPC Namenode
 	//Namenode send back datanodes who save the file
-	toFind := filenames[0]
+	sdfsfilename := filenames[0]
 
 	namenodeAddr := GetNamenodeAddr()
 	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
 	client.Dial()
 
-	datanodeList, n := client.GetDatanodeList(toFind)
+	datanodeList, n := client.GetDatanodeList(sdfsfilename)
 	if n == 0 {
-		fmt.Printf("Find error: no sdfsfile %s\n", toFind)
+		fmt.Printf("Find error: no sdfsfile %s\n", sdfsfilename)
 		return
 	}
 	
 	//Print the list
-	fmt.Printf("Servers who save the file %s:\n", toFind)
+	fmt.Printf("Servers who save the file %s:\n", sdfsfilename)
 	for _, datanodeID := range datanodeList {
 		fmt.Println(datanodeID)
 	}
@@ -274,8 +253,8 @@ func ShowDatanode(filenames []string){
 
 func ShowFile() {
 	//List files in "MP3/SDFS/localFile"
-	listFile(Config.LocalfilePath)
+	listFile(Config.LocalfileDir)
 
 	//List files in "MP3/SDFS/sdfsFile"
-	listFile(Config.SdfsfilePath)
+	listFile(Config.SdfsfileDir)
 }
