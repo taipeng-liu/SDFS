@@ -31,7 +31,10 @@ func main() {
 	defer source.Close()
 
 	_, err = os.Stat(d)
-	//check err
+	if err!= nil {
+		fmt.Println("os.Stat(d) error")
+		return
+	}
 
 	destination, err := os.OpenFile(d, os.O_RDWR|os.O_CREATE, 0755)
 
