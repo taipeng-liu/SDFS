@@ -10,21 +10,32 @@ import(
 
 type Datanode struct{
 	NamenodeAddr string
+	SdfsfileList []string
 }
 
 //////////////////////////////////////Methods///////////////////////////////////
 
-func (d *Datanode) Put (req PutRequest, resp *PutResponse) error{
+func (d *Datanode) GetNamenodeAddr(req string, resp *string) error{
+	*resp = d.NamenodeAddr
+	return nil
+}
+
+func (d *Datanode) GetSdfsfileList(req string, resp *[]string) error{
+	*resp = d.SdfsfileList
+	return nil
+}
+
+func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
 	//TODO
 	return nil
 }
 
-func (d *Datanode) Get (req GetRequest, resp *GetResponse) error{
+func (d *Datanode) Get(req GetRequest, resp *GetResponse) error{
 	//TODO
 	return nil
 }
 
-func (d *Datanode) Delete (req DeleteRequest, resp *DeleteResponse) error{
+func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error{
 	//TODO
 	return nil
 }

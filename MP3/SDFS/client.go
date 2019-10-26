@@ -73,6 +73,7 @@ func (c *Client) Delete() () {
 	//TODO
 }
 
+
 ///////////////////////////////////Helper functions/////////////////////////////////////////
 
 /*
@@ -123,13 +124,38 @@ func PutFileAt(filename string, addr string, port string, respCountPt *int){
 	client.Close()
 }
 
+func GetFileAt() {
+
+}
+
+
+func DeleteFileAt() {
+
+}
+
+func GetNamenodeAddr() string{
+	var resp string
+
+	client := NewClient("localhost" + ":" + Config.DatanodePort)
+	client.Dial()
+
+	if err := client.rpcClient.Call("Datanode.GetNamenodeAddr", "", &resp); err != nil{
+		return ""
+	}
+
+	client.Close()
+
+	return resp
+}
+
 /////////////////////Functions Called from main.go////////////////////////
 
 func PutFile(filenames []string){
 
 	localfilename := filenames[0]
 	sdfsfilename  := filenames[1]
-	namenodeAddr := GetNamenodeAddr() //TODO: implement GetNamenodeAddr somewhere
+
+	namenodeAddr := GetNamenodeAddr()
 	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
 	client.Dial()
 
@@ -153,14 +179,14 @@ func PutFile(filenames []string){
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
-		//Question: Is goroutine applicable for synchronizely uploading?
+		//Question: Synchronizely uploading?
 		go PutFileAt(localfilename, datanodeAddr, Config.DatanodePort, &respCount)
 	}
 
 	while respCount < W {
 		//Waiting for W response(s)
-		//TODO
-		//Set up time out in case of no response causing forever waiting
+		//Check the condition every second
+		//TODO: Set up time out in case of no response causing forever waiting
 		time.Sleep(time.Second())
 	}
 	
@@ -174,7 +200,8 @@ func GetFile(filenames []string){
 
 	localfilename := filenames[1]
 	sdfsfilename  := filenames[0]
-	namenodeAddr := GetNamenodeAddr() //TODO: implement GetNamenodeAddr somewhere
+
+	namenodeAddr := GetNamenodeAddr()
 	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
 	client.Dial()
 
@@ -199,7 +226,7 @@ func DeleteFile(filenames []string){
 	//Namenode send back datanodes who save the file
 	toDelete := filenames[0]
 
-	namenodeAddr := GetNamenodeAddr() //TODO: implement GetNamenodeAddr somewhere
+	namenodeAddr := GetNamenodeAddr()
 	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
 	client.Dial()
 
@@ -226,7 +253,7 @@ func ShowDatanode(filenames []string){
 	//Namenode send back datanodes who save the file
 	toFind := filenames[0]
 
-	namenodeAddr := GetNamenodeAddr() //TODO: implement GetNamenodeAddr somewhere
+	namenodeAddr := GetNamenodeAddr()
 	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
 	client.Dial()
 
