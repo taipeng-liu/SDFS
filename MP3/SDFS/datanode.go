@@ -1,21 +1,54 @@
 package sdfs
 
 import(
+	"fmt"
+	"log"
+	"net"
+	"net/rpc"
+	"net/http"
 )
 
-type Datanode int
+type Datanode struct{
+}
 
-func (d *Datanode) Put (request Request, response *Response) error{
+//////////////////////////////////////Methods///////////////////////////////////
+
+func (d *Datanode) Put (req PutRequest, resp *PutResponse) error{
 	//TODO
 	return nil
 }
 
-func (d *Datanode) Get (request Request, response *Response) error{
+func (d *Datanode) Get (req GetRequest, resp *GetResponse) error{
 	//TODO
 	return nil
 }
 
-func (d *Datanode) Delete (request Request, response *Response) error{
+func (d *Datanode) Delete (req DeleteRequest, resp *DeleteResponse) error{
 	//TODO
 	return nil
 }
+
+/////////////////////////////////////////Functions///////////////////////////////
+
+func RunDatanodeServer (Port string) {
+	var datanode = new(Datanode)
+
+	err := rpc.Register(datanode)
+	if err != nil {
+		log.Fatal("Register(datanode) error:", err)
+	}
+
+	rpc.HandleHTTP()
+
+	listener, err := net.Listen("tcp", ":" + Port)
+	if err != nil {
+		log.Fatal("Listen error", err)
+	}
+	
+	fmt.Printf("===RunDatanodeServer: Listen on port %s\n", Port)
+	err = http.Serve(listener, nil)
+	if err != nil {
+		log.Fatal("Serve(listener, nil) error: ", err)
+	}
+}
+

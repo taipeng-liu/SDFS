@@ -10,6 +10,9 @@ import (
 const (
 	LocalfilePath     = "SDFS/localFile"
 	SdfsfilePath      = "SDFS/sdfsFile"
+	DatanodePort      = "8885"
+	NamenodePort      = "8884"
+	BLOCK_SIZE        =  512
 )
 
 const (
@@ -18,8 +21,6 @@ const (
 	ConnPort          = "8888"
 	HeartbeatPort     = "8887"
 	IntroducePort     = "8886"
-	DatanodePort      = "8885"
-	NamenodePort      = "8884"
 	ConnlocalHost     = "localhost"
 	TimeOut           = 4100
 	IntroducerAddress = "fa19-cs425-g73-01.cs.illinois.edu"

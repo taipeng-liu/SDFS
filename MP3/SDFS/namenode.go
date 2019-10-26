@@ -3,40 +3,46 @@ package sdfs
 import(
 )
 
-type Namenode int
+type Namenode struct{
+	Filemap map[string][]string
+}
 
-var filemap map[Filename]NodeIDList
+////////////////////////////////////////Methods////////////////////////////
 
-//Not comprehensively implemented!!
-
-
-///////////////RPC functions////////////////////
-
-func (n *Namenode) SearchDatanode (request *Request, response *Response) error {
+func (n *Namenode) GetDatanodeList (req *FindRequest, resp *FindResponse) error {
 	//TODO
 	//Given a request, return response containing a list of all
 	//Datanodes who has the file
 	return nil
 }
 
-
-//////////////Map Operations////////////////////
-func Add() {
+func (n *Namenode) Add() {
+	//TODO
 	//add a new item into filemap
 	//return added key and value
 }
 
-func Delete() {
+func (n *Namenode) Delete() {
+	//TODO
 	//delete a item from filemap by key
 	//return deleted key and value
 }
 
-func Find() {
+func (n *Namenode) Find() {
+	//TODO
 	//find value by key
 	//return value if found or nil
 }
 
-func Edit() {
+func (n *Namenode) Edit() {
+	//TODO
 	//modify value by key
 	//return modified key and value
+}
+
+
+//////////////////////////////////////////Functions////////////////////////////////////////////
+
+func RunNamenodeServer(Port string) {
+	//TODO
 }

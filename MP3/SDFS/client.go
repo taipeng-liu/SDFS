@@ -14,6 +14,41 @@ const (
 	W = 4
 )
 
+type Client struct {
+	Addr       string
+	rpcClient  *rpc.Client
+}
+
+func NewClient(addr string) *Client {
+	return &Client{Addr:addr}
+}
+
+func (c *Client) Dial() error {
+	client, err := rpc.DialHTTP("tcp", c.Addr)
+	if err != nil {
+		return err
+	}
+	c.rpcClient = client
+
+	return nil
+}
+
+func (c *Client) Close() error {
+	return c.rpcClient.Close()
+}
+
+func (c *Client) GetDatanodeList(filename string) ([]string, int) {
+	var res FindResponse
+	if err := c.rpcClient.Call("Namenode.GetDatanodeList", FindRequest{Filename: filename}, &res); err != nil{
+		return []string{}, 0
+	}
+
+	return res.DatanodeList, len(res.DatanodeList)
+}
+
+///////////////////////////////////Helper functions/////////////////////////////////////////
+
+/*
 func RequestDatanode(reqType string, request Request, datanodeAddr string, port string) Response{
 	var response Response
 	
@@ -35,16 +70,7 @@ func RequestDatanode(reqType string, request Request, datanodeAddr string, port 
 
 	return response
 }
-
-func GetDatanodeList(filename string) ([]string, int){
-	var datanodeList []string
-	var response Response
-
-	//TODO: RPC Namenode and get response
-	//TODO: Check response to get datanodeList
-
-	return datanodeList, len(datanodeList)
-}
+*/
 
 
 func listFile(dirPath string) {
@@ -61,15 +87,19 @@ func listFile(dirPath string) {
 }
 
 
-////////////////Functions Called from main.go/////////////////////
+/////////////////////Functions Called from main.go////////////////////////
+
 func PutFile(filenames []string){
 
 	localfilename := filenames[0]
 	sdfsfilename  := filenames[1]
+	namenodeAddr := GetNamenodeAddr() //TODO: implement GetNamenodeAddr somewhere
+	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
+	client.Dial()
 
 	//RPC Namenode
 	//Check if the file already exist
-	datanodeList, n := GetDatanodeList(sdfsfilename)
+	datanodeList, n := client.GetDatanodeList(sdfsfilename)
 
 	if n > 0 {
 		//Exist
@@ -86,12 +116,15 @@ func PutFile(filenames []string){
 
 func GetFile(filenames []string){
 
-	localfilename := filename[1]
-	sdfsfilename  := filename[0]
+	localfilename := filenames[1]
+	sdfsfilename  := filenames[0]
+	namenodeAddr := GetNamenodeAddr() //TODO: implement GetNamenodeAddr somewhere
+	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
+	client.Dial()
 
 	//RPC Namenode
 	//Namenode send back datanodes who is currently storing the file
-	datanodeList, n := GetDatanodeList(sdfsfilename)
+	datanodeList, n := client.GetDatanodeList(sdfsfilename)
 
 	if n > 0 {
 		//Exist
@@ -106,8 +139,13 @@ func GetFile(filenames []string){
 func DeleteFile(filenames []string){
 	//RPC Namenode
 	//Namenode send back datanodes who save the file
-	toDelete := filename[0]
-	datanodeList, n := GetDatanodeList(toDelete)
+	toDelete := filenames[0]
+
+	namenodeAddr := GetNamenodeAddr() //TODO: implement GetNamenodeAddr somewhere
+	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
+	client.Dial()
+
+	datanodeList, n := client.GetDatanodeList(toDelete)
 
 	if n == 0 {
 		fmt.Printf("Delete error: no such sdfsfile %s\n", toDelete)
@@ -116,34 +154,43 @@ func DeleteFile(filenames []string){
 
 	//RPC each datanode from the list
 	for _, datanodeID := range datanodeList{
-		datanodeAddr := Config.GetIPAddrFromID(datanodeID)
+		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
 		//TODO RPC datanode
 	}
 	//TODO: When ALL datanodes send finished, return
 	//Question: Is "ALL" neccessary?
+
+	client.Close()
 }
 
 func ShowDatanode(filenames []string){
 	//RPC Namenode
 	//Namenode send back datanodes who save the file
 	toFind := filenames[0]
-	datanodeList, n := GetDatanodeList(toFind)
 
+	namenodeAddr := GetNamenodeAddr() //TODO: implement GetNamenodeAddr somewhere
+	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
+	client.Dial()
+
+	datanodeList, n := client.GetDatanodeList(toFind)
 	if n == 0 {
 		fmt.Printf("Find error: no sdfsfile %s\n", toFind)
 		return
 	}
-
+	
 	//Print the list
 	fmt.Printf("Servers who save the file %s:\n", toFind)
 	for _, datanodeID := range datanodeList {
 		fmt.Println(datanodeID)
 	}
+
+	client.Close()
 }
 
 func ShowFile() {
-	//List files in "MP3/LocalFile"
+	//List files in "MP3/SDFS/localFile"
 	listFile(Config.LocalfilePath)
-	//List files in "MP3/SDFS/SDFSFile"
+
+	//List files in "MP3/SDFS/sdfsFile"
 	listFile(Config.SdfsfilePath)
 }
