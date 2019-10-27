@@ -68,7 +68,7 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error{
 func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
 	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
 
-	sdfsfile, err := os.OpenFile(sdfsfilepath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
+	sdfsfile, err := os.OpenFile(sdfsfilepath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println("os.OpenFile() error")
 		resp.Err = err
@@ -76,7 +76,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
 	}
 
 	if _, err = sdfsfile.WriteAt(req.Block.Content, int64(req.Block.Idx) * req.Block.Size); err != nil {
-		log.Println("sdfsfile.WriteAt() error")
+		log.Println("sdfsfile.WriteAt() error",err)
 		resp.Err = err
 		return err
 	}
