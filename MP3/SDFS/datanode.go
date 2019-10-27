@@ -35,7 +35,7 @@ func RunDatanodeServer () {
 		log.Fatal("Listen error", err)
 	}
 	
-	fmt.Printf("===RunDatanodeServer: Listen on port %s\n", Port)
+	fmt.Printf("===RunDatanodeServer: Listen on port %s\n", Config.DatanodePort)
 	err = http.Serve(listener, nil)
 	if err != nil {
 		log.Fatal("Serve(listener, nil) error: ", err)

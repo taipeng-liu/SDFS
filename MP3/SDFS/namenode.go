@@ -32,7 +32,7 @@ func RunNamenodeServer() {
 		log.Fatal("Listen error", err)
 	}
 	
-	fmt.Printf("===RunNamenodeServer: Listen on port %s\n", Port)
+	fmt.Printf("===RunNamenodeServer: Listen on port %s\n", Config.NamenodePort)
 	err = http.Serve(listener, nil)
 	if err != nil {
 		log.Fatal("Serve(listener, nil) error: ", err)
