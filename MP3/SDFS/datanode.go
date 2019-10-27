@@ -22,13 +22,24 @@ type Datanode struct{
 
 func RunDatanodeServer () {
 	var datanode = new(Datanode)
+	datanodeServer := rpc.NewServer()
 
-	err := rpc.Register(datanode)
+	err := datanodeServer.Register(datanode)
 	if err != nil {
 		log.Fatal("Register(datanode) error:", err)
 	}
 
-	rpc.HandleHTTP()
+	//======For multiple servers=====
+	oldMux := http.DefaultServeMux
+	mux := http.NewServeMux()
+	http.DefaultServeMux = mux
+	//===============================
+
+	datanodeServer.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
+
+	//=======For multiple servers=====
+	http.DefaultServeMux = oldMux
+	//================================
 
 	listener, err := net.Listen("tcp", ":" + Config.DatanodePort)
 	if err != nil {
@@ -36,7 +47,7 @@ func RunDatanodeServer () {
 	}
 	
 	fmt.Printf("===RunDatanodeServer: Listen on port %s\n", Config.DatanodePort)
-	err = http.Serve(listener, nil)
+	err = http.Serve(listener, mux)
 	if err != nil {
 		log.Fatal("Serve(listener, nil) error: ", err)
 	}
@@ -47,7 +58,7 @@ func RunDatanodeServer () {
 func (d *Datanode) GetNamenodeAddr(req string, resp *string) error{
 	//No namenode right now, start a selection process
 	if d.NamenodeAddr == "" {
-		d.StartElection()
+		d.NamenodeAddr = StartElection()
 	}
 	
 	*resp = d.NamenodeAddr
@@ -109,8 +120,8 @@ func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error{
 	return nil
 }
 
-func (d *Datanode) StartElection() {
+func StartElection() string{
 	//TODO modify it
-	d.NamenodeAddr = "fa19-cs425-g73-01.cs.illinois.edu"
+	return "fa19-cs425-g73-01.cs.illinois.edu"
 }
 

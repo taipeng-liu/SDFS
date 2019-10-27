@@ -1,0 +1,26 @@
+2019/10/27 14:40:50 Main: Join the group
+2019/10/27 14:40:50 rpc.Register: reply type of method "Add" is not a pointer: "string"
+2019/10/27 14:40:50 rpc.Register: method "Delete" has 1 input parameters; needs exactly three
+2019/10/27 14:40:50 rpc.Register: method "Find" has 1 input parameters; needs exactly three
+2019/10/27 14:40:50 rpc.Register: method "Update" has 1 input parameters; needs exactly three
+2019/10/27 14:40:50 rpc.Register: method "StartElection" has 1 input parameters; needs exactly three
+2019/10/27 14:47:03 Main: Join the group
+2019/10/27 14:47:03 rpc.Register: reply type of method "Add" is not a pointer: "string"
+2019/10/27 14:47:03 rpc.Register: method "Delete" has 1 input parameters; needs exactly three
+2019/10/27 14:47:03 rpc.Register: method "Find" has 1 input parameters; needs exactly three
+2019/10/27 14:47:03 rpc.Register: method "Update" has 1 input parameters; needs exactly three
+2019/10/27 14:47:03 rpc.Register: method "StartElection" has 1 input parameters; needs exactly three
+2019/10/27 14:51:30 Main: Join the group
+2019/10/27 14:51:30 rpc.Register: reply type of method "Add" is not a pointer: "string"
+2019/10/27 14:51:30 rpc.Register: method "Delete" has 1 input parameters; needs exactly three
+2019/10/27 14:51:30 rpc.Register: method "Find" has 1 input parameters; needs exactly three
+2019/10/27 14:51:30 rpc.Register: method "Update" has 1 input parameters; needs exactly three
+2019/10/27 14:51:30 rpc.Register: method "StartElection" has 1 input parameters; needs exactly three
+2019/10/27 14:55:45 Main: Join the group
+2019/10/27 14:56:33 Main: Join the group
+2019/10/27 14:56:44 Main: Join the group
+2019/10/27 16:49:13 Main: Join the group
+2019/10/27 16:49:13 addNode(): Adding nodeID fa19-cs425-g73-01.cs.illinois.edu:20191027164913...
+2019/10/27 16:49:13 addNode(): Successfully added!
+2019/10/27 16:49:13 Updater: New List is: 
+2019/10/27 16:49:13 [fa19-cs425-g73-01.cs.illinois.edu:20191027164913]

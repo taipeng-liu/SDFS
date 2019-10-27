@@ -19,13 +19,24 @@ type Namenode struct{
 
 func RunNamenodeServer() {
 	var namenode = new(Namenode)
+	namenodeServer := rpc.NewServer()
 
-	err := rpc.Register(namenode)
+	err := namenodeServer.Register(namenode)
 	if err != nil {
 		log.Fatal("Register(namenode) error:", err)
 	}
 
-	rpc.HandleHTTP()
+	//======For multiple servers=====
+	oldMux := http.DefaultServeMux
+	mux := http.NewServeMux()
+	http.DefaultServeMux = mux
+	//===============================
+
+	namenodeServer.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
+	
+	//=======For multiple servers=====
+	http.DefaultServeMux = oldMux
+	//================================
 
 	listener, err := net.Listen("tcp", ":" + Config.NamenodePort)
 	if err != nil {
@@ -33,7 +44,7 @@ func RunNamenodeServer() {
 	}
 	
 	fmt.Printf("===RunNamenodeServer: Listen on port %s\n", Config.NamenodePort)
-	err = http.Serve(listener, nil)
+	err = http.Serve(listener, mux)
 	if err != nil {
 		log.Fatal("Serve(listener, nil) error: ", err)
 	}
@@ -87,6 +98,8 @@ func (n *Namenode) InsertFile(req *InsertRequest, resp *InsertResponse) error {
 ///////////////////////////////////Member Function////////////////////////////
 
 //***Function: Simply add a new entry into Filemap, return added key and value
+
+/*
 func (n *Namenode) Add(nodeID string, sdfsfilename string) {
 	return
 }
@@ -113,4 +126,4 @@ func (n *Namenode) Update() {
 }
 
 
-
+*/

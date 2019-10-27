@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/rpc"
 	"net/http"
+	"time"
 )
 
 type Item struct {
@@ -75,26 +76,37 @@ func (a *API) DeleteItem(item Item, reply *Item) error {
 	return nil
 }
 
-func main() {
-
+func RunServer(port string) {
 	var api = new(API)
-	err := rpc.Register(api)
 
+	server := rpc.NewServer()
+
+	err := server.Register(api)
 	if err != nil {
 		log.Fatal("error registering API", err)
 	}
 
-	rpc.HandleHTTP()
+	oldMux := http.DefaultServeMux
+	mux := http.NewServeMux()
+	http.DefaultServeMux = mux
 
-	listener, err := net.Listen("tcp", ":4040")
 
+
+	server.HandleHTTP(rpc.DefaultRPCPath, rpc.DefaultDebugPath)
+
+	http.DefaultServeMux = oldMux
+
+	listener, err := net.Listen("tcp", ":" + port)
 	if err != nil {
-		log.Fatal("Listener error", err)
+		panic(err)
 	}
 
-	log.Printf("serving rpc on port %d", 4040)
-	err = http.Serve(listener, nil)
-	if err != nil {
-		log.Fatal("error serving: ", err)
-	}
+	log.Printf("serving rpc on port %d", 4041)
+	http.Serve(listener, mux)
+}
+
+func main() {
+	go RunServer("4040")
+	go RunServer("4041")
+	time.Sleep(10*time.Second)
 }
