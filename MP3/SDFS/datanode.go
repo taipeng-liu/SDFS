@@ -66,6 +66,8 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error{
 }
 
 func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
+	Config.CreateDirIfNotExist(Config.SdfsfileDir)
+
 	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
 
 	sdfsfile, err := os.OpenFile(sdfsfilepath, os.O_RDWR|os.O_CREATE, 0644)

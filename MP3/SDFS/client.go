@@ -131,9 +131,10 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error{
 
 func (c *Client) Get(sdfsfilename string, localfilename string, addr string) error{
 	Config.CreateDirIfNotExist(Config.TempfileDir)
+
 	tempfilePath := Config.TempfileDir + "/" + localfilename + "." + addr
 
-	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
+	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println("os.OpenFile() error")
 		return err
@@ -155,6 +156,8 @@ func (c *Client) Get(sdfsfilename string, localfilename string, addr string) err
 			return err
 		}
 	}
+
+	Config.CreateDirIfNotExist(Config.LocalfileDir)
 
 	os.Rename(tempfilePath, Config.LocalfileDir + "/" + localfilename)
 	return nil
