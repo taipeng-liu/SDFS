@@ -113,6 +113,7 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error{
 		block := Block{Idx    : blockIdx,
 			       Size   : int64(n),
 			       Content: buf[:n],}//TODO: Test: n or n+1
+
 		req := PutRequest{sdfsfilename,block}
 
 		var res PutResponse
