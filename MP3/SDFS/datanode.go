@@ -108,7 +108,7 @@ func (d *Datanode) Get(req GetRequest, resp *GetResponse) error{
 		}
 	}
 	
-	resp.Content = buf[:n] //TODO: test n or n + 1
+	resp.Content = buf[:n]
 
 	return nil
 }
