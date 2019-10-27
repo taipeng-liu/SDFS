@@ -176,6 +176,11 @@ func (c *Client) Delete(sdfsfilename string) error{
 
 func PutFile(filenames []string){
 
+	if len(filenames) < 2 {
+		fmt.Println("Format: put [localfilename] [sdfsfilename]")
+		return
+	}
+
 	localfilename := filenames[0]
 	sdfsfilename  := filenames[1]
 
@@ -222,6 +227,10 @@ func PutFile(filenames []string){
 }
 
 func GetFile(filenames []string){
+	if len(filenames) < 2 {
+		fmt.Println("Format: get [sdfsfilename] [localfilename]")
+		return
+	}
 
 	localfilename := filenames[1]
 	sdfsfilename  := filenames[0]
@@ -264,6 +273,9 @@ func GetFile(filenames []string){
 }
 
 func DeleteFile(filenames []string){
+	if len(filenames) < 1 {
+		fmt.Println("Format: delete [sdfsfilename]")
+	}
 	
 	sdfsfilename := filenames[0]
 
@@ -297,6 +309,10 @@ func DeleteFile(filenames []string){
 }
 
 func ShowDatanode(filenames []string){
+	if len(filenames) < 1 {
+		fmt.Println("Format: ls [sdfsfilename]")
+	}
+
 	//Rpc Namenode which send back datanodeList
 	sdfsfilename := filenames[0]
 
