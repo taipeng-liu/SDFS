@@ -2,7 +2,13 @@ package sdfs
 
 import(
 	"fmt"
-	Mem "../Membership"
+	"log"
+	"net"
+	"net/rpc"
+	"net/http"
+
+	Config "../Config"
+	//Mem "../Membership"
 )
 
 type Namenode struct{
@@ -11,7 +17,7 @@ type Namenode struct{
 
 //////////////////////////////////////////Functions////////////////////////////////////////////
 
-func RunNamenodeServer(Port string) {
+func RunNamenodeServer() {
 	var namenode = new(Namenode)
 
 	err := rpc.Register(namenode)
@@ -21,7 +27,7 @@ func RunNamenodeServer(Port string) {
 
 	rpc.HandleHTTP()
 
-	listener, err := net.Listen("tcp", ":" + Port)
+	listener, err := net.Listen("tcp", ":" + Config.NamenodePort)
 	if err != nil {
 		log.Fatal("Listen error", err)
 	}
@@ -37,18 +43,34 @@ func RunNamenodeServer(Port string) {
 /*
 	Given a request, return response containing a list of all Datanodes who has the file
 */
+
+func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
+	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu"}
+	return nil
+}
+func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
+	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu"}
+	return nil
+}
+
+/*
 func (n *Namenode) GetDatanodeList(req *FindRequest, resp *FindResponse) error {
 	if val, ok := n.Filemap[FindRequest.Filename]; ok {
 		return n.Filemap[FindRequest.Filename]
 	} 
 	return nil
 }
+*/
+
+
 
 /*
 	Figure out the value of Filamap[sdfsfilename] (use Mmonitoring List AKA MemHBList)
 	Insert pair (sdfsfilename, datanodeList) into Filemap
 	Send datanodeList back to InsertResponse
 */
+
+/*
 func (n *Namenode) InsertFile(req *InsertRequest, resp *InsertResponse) error {
 	
 	datanodeList := Mem.GetListByRelateIndex([]int{-2,-1,1}, InsertRequest.LocalID)
@@ -60,32 +82,34 @@ func (n *Namenode) InsertFile(req *InsertRequest, resp *InsertResponse) error {
 
 	return datanodeList
 }
-
+*/
 
 ///////////////////////////////////Member Function////////////////////////////
 
 //***Function: Simply add a new entry into Filemap, return added key and value
-func (n *Namenode) Add(string nodeID, string sdfsfilename) {
-
-	
+func (n *Namenode) Add(nodeID string, sdfsfilename string) {
+	return
 }
 
 func (n *Namenode) Delete() {
 	//TODO
 	//delete an item from filemap by key
 	//return deleted key and value
+	return
 }
 
 func (n *Namenode) Find() {
 	//TODO
 	//find value by key
 	//return value if found or nil
+	return
 }
 
 func (n *Namenode) Update() {
 	//TODO
 	//modify value by key
 	//return modified key and value
+	return
 }
 
 

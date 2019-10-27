@@ -94,10 +94,6 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error{
 		totalblock += 1
 	}
 
-	fi := FileInfo{Filename   : sdfsfilename,
-		       Filesize   : fileSize,
-		       Totalblock : totalblock,}
-
 	//Open the file
 	localfile, err := os.Open(localfilepath)
 	if err != nil {
@@ -117,8 +113,7 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error{
 		block := Block{Idx    : blockIdx,
 			       Size   : int64(n),
 			       Content: buf[:n],}//TODO: Test: n or n+1
-		req := PutRequest{FileInfo : fi,
-				  Block    : block,}
+		req := PutRequest{sdfsfilename,block}
 
 		var res PutResponse
 		if err = c.rpcClient.Call("Datanode.Put", req, &res); err != nil{
@@ -137,14 +132,16 @@ func (c *Client) Get(sdfsfilename string, localfilename string, addr string) err
 	Config.CreateDirIfNotExist(Config.TempfileDir)
 	tempfilePath := Config.TempfileDir + "/" + localfilename + "." + addr
 
-	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE|os.APPEND, 0755)
+	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
 		log.Println("os.OpenFile() error")
 		return err
 	}
 
+	eof := false
+	
 	for blockIdx := 0; !eof; blockIdx++ {
-		req := GetRequest{sdfsfilename, int64(blockIdx) * Config.BLOCK_SIZE, BLOCK_SIZE}
+		req := GetRequest{sdfsfilename, int64(blockIdx) * Config.BLOCK_SIZE, Config.BLOCK_SIZE}
 		var res GetResponse
 		if err := c.rpcClient.Call("Datanode.Get", req, &res); err != nil{
 			return err
@@ -153,7 +150,7 @@ func (c *Client) Get(sdfsfilename string, localfilename string, addr string) err
 		eof = res.Eof
 		
 		if _, err = tempfile.WriteAt(res.Content, int64(blockIdx) * Config.BLOCK_SIZE); err != nil {
-			log.Prinln("tempfile.WriteAt() error")
+			log.Println("tempfile.WriteAt() error")
 			return err
 		}
 	}
@@ -164,7 +161,7 @@ func (c *Client) Get(sdfsfilename string, localfilename string, addr string) err
 
 func (c *Client) Delete(sdfsfilename string) error{
 	req := DeleteRequest{sdfsfilename}
-	var res DeleteReponse
+	var res DeleteResponse
 
 	if err := c.rpcClient.Call("Datanode.Delete", req, &res); err != nil{
 		return err
@@ -249,7 +246,7 @@ func GetFile(filenames []string){
 		go RpcOperationAt("get", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, &respCount)
 	}
 
-	for (resCount < R && resCount < n){
+	for (respCount < R && respCount < n){
 		//TODO timeout
 		time.Sleep(time.Second)
 	}
@@ -257,9 +254,9 @@ func GetFile(filenames []string){
 	client.Close()
 
 	//Clear all .tmp file
-	err := os.RemoveAll(Config.TempFileDir)
+	err := os.RemoveAll(Config.TempfileDir)
 	if err != nil {
-		log.Println("RemoveAll() error: can't remove tempFileDir")
+		log.Println("RemoveAll() error: can't remove TempfileDir")
 	}
 
 	log.Println("GetFile successfully return")
@@ -358,7 +355,7 @@ func RpcOperationAt(operation string, localfilename string, sdfsfilename string,
 			log.Println("RpcOperationAt(): Don't support this operation")
 	}
 
-	(*respCountPt)++          //TODO: This line is a critical section, use mutex
+	(*respCount)++          //TODO: This line is a critical section, use mutex
 
 	client.Close()
 }

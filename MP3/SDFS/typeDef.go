@@ -30,7 +30,7 @@ type InsertResponse struct {
 }
 
 type PutRequest struct {
-	Fileinfo  FileInfo
+	Filename  string
 	Block     Block
 }
 

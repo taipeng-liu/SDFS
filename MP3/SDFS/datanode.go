@@ -7,6 +7,7 @@ import(
 	"net/rpc"
 	"net/http"
 	"os"
+	"io"
 
 	Config "../Config"
 )
@@ -19,7 +20,7 @@ type Datanode struct{
 
 /////////////////////////////////////////Functions////////////////////////////////
 
-func RunDatanodeServer (Port string) {
+func RunDatanodeServer () {
 	var datanode = new(Datanode)
 
 	err := rpc.Register(datanode)
@@ -29,7 +30,7 @@ func RunDatanodeServer (Port string) {
 
 	rpc.HandleHTTP()
 
-	listener, err := net.Listen("tcp", ":" + Port)
+	listener, err := net.Listen("tcp", ":" + Config.DatanodePort)
 	if err != nil {
 		log.Fatal("Listen error", err)
 	}
@@ -46,7 +47,7 @@ func RunDatanodeServer (Port string) {
 func (d *Datanode) GetNamenodeAddr(req string, resp *string) error{
 	//No namenode right now, start a selection process
 	if d.NamenodeAddr == "" {
-		d.startElection()
+		d.StartElection()
 	}
 	
 	*resp = d.NamenodeAddr
@@ -54,7 +55,7 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error{
 }
 
 func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
-	sdfsfilepath := Config.SdfsfileDir + "/" + req.FileInfo.Filename
+	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
 
 	sdfsfile, err := os.OpenFile(sdfsfilepath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0755)
 	if err != nil {
