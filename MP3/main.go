@@ -44,15 +44,15 @@ func main() {
 		parsedcmd := Parse(cmd)
 
 		switch parsedcmd[0] {
-		case "Join":
+		case "join":
 			log.Println("Main: Join the group")
 			go Mem.RunNode(isIntroducer)
 			go Sdfs.RunDatanodeServer(Config.DatanodePort) //"SDFS/DatanodeServer.go"
 			//TODO Decide when and where run Namenode Server???
-		case "Leave":
+		case "leave":
 			log.Println("Main: Leave the group")
 			go Mem.StopNode()
-		case "List":
+		case "mlist":
 			log.Println("Main: Show the current Membership List")
 			go Mem.ShowList()
 		case "ID":

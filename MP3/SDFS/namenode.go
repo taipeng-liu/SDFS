@@ -1,40 +1,78 @@
 package sdfs
 
 import(
+	"fmt"
+	Mem "../Membership"
 )
 
 type Namenode struct{
-	Filemap map[string][]string
+	Filemap map[string][]string 
 }
 
-////////////////////////////////////////Methods////////////////////////////
+//////////////////////////////////////////Functions////////////////////////////////////////////
 
-func (n *Namenode) GetDatanodeList (req *FindRequest, resp *FindResponse) error {
-	//TODO
-	//Given a request, return response containing a list of all
-	//Datanodes who has the file
+func RunNamenodeServer(Port string) {
+	var namenode = new(Namenode)
+
+	err := rpc.Register(namenode)
+	if err != nil {
+		log.Fatal("Register(namenode) error:", err)
+	}
+
+	rpc.HandleHTTP()
+
+	listener, err := net.Listen("tcp", ":" + Port)
+	if err != nil {
+		log.Fatal("Listen error", err)
+	}
+	
+	fmt.Printf("===RunNamenodeServer: Listen on port %s\n", Port)
+	err = http.Serve(listener, nil)
+	if err != nil {
+		log.Fatal("Serve(listener, nil) error: ", err)
+	}
+}
+
+///////////////////////////////////RPC Methods////////////////////////////
+/*
+	Given a request, return response containing a list of all Datanodes who has the file
+*/
+func (n *Namenode) GetDatanodeList(req *FindRequest, resp *FindResponse) error {
+	if val, ok := n.Filemap[FindRequest.Filename]; ok {
+		return n.Filemap[FindRequest.Filename]
+	} 
 	return nil
 }
 
-func (n *Namenode) InsertFile (req *InsertRequest, resp *InsertResponse) error {
-	//TODO
-	//Figure out the value of Filamap[sdfsfilename]
-	//i.e. find datanodes who should save the file
-	//Insert pair (sdfsfilename, datanodeList) into Filemap
-	//Send datanodeList back to InsertResponse
-	return nil
+/*
+	Figure out the value of Filamap[sdfsfilename] (use Mmonitoring List AKA MemHBList)
+	Insert pair (sdfsfilename, datanodeList) into Filemap
+	Send datanodeList back to InsertResponse
+*/
+func (n *Namenode) InsertFile(req *InsertRequest, resp *InsertResponse) error {
+	
+	datanodeList := Mem.GetListByRelateIndex([]int{-2,-1,1}, InsertRequest.LocalID)
+
+	for i, datanodeID := range datanodeList {
+		n.Filemap[InsertRequest.Filename] = append(n.Filemap[InsertRequest.Filename], datanodeID) 
+	}
+	// n.Filemap[InsertRequest.Filename] = datanodeList
+
+	return datanodeList
 }
 
 
-func (n *Namenode) Add() {
-	//TODO
-	//add a new item into filemap
-	//return added key and value
+///////////////////////////////////Member Function////////////////////////////
+
+//***Function: Simply add a new entry into Filemap, return added key and value
+func (n *Namenode) Add(string nodeID, string sdfsfilename) {
+
+	
 }
 
 func (n *Namenode) Delete() {
 	//TODO
-	//delete a item from filemap by key
+	//delete an item from filemap by key
 	//return deleted key and value
 }
 
@@ -44,15 +82,11 @@ func (n *Namenode) Find() {
 	//return value if found or nil
 }
 
-func (n *Namenode) Edit() {
+func (n *Namenode) Update() {
 	//TODO
 	//modify value by key
 	//return modified key and value
 }
 
 
-//////////////////////////////////////////Functions////////////////////////////////////////////
 
-func RunNamenodeServer(Port string) {
-	//TODO
-}

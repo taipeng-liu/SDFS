@@ -5,11 +5,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"os"
 )
 
 const (
 	LocalfileDir      = "SDFS/localFile"
 	SdfsfileDir       = "SDFS/sdfsFile"
+	TempfileDir	  = "SDFS/tempFile"
 	DatanodePort      = "8885"
 	NamenodePort      = "8884"
 	BLOCK_SIZE        =  512 * 1024
@@ -32,6 +34,15 @@ func GetLocalfilePath(localfilename string) string {
 
 func GetSdfsfilePath(sdfsfilename string) string {
 	return SdfsfileDir + "/" + sdfsfilename
+}
+
+func CreateDirIfNotExist(dir string) {
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0755)
+		if err != nil{
+			log.Println(err)
+		}
+	}
 }
 
 func CreateID() string {

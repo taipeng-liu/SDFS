@@ -22,6 +22,7 @@ func main() {
 		return
 	}
 
+
 	if !sourceFileStat.Mode().IsRegular() {
 		fmt.Println("is not regular")
 	}
@@ -39,7 +40,7 @@ func main() {
 
 	buf := make([]byte, BUFFER_SIZE)
 	for {
-		n, err := source.Read(buf)
+		n, err := source.ReadAt(buf)
 		if err != nil && err != io.EOF{
 			return
 		}

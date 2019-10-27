@@ -8,7 +8,7 @@ type Block struct {
 
 type FileInfo struct {
 	Filename    string
-	Filesize    int64
+	Filesize    int
 	Totalblock  int
 }
 
@@ -22,6 +22,7 @@ type FindResponse struct {
 
 type InsertRequest struct {
 	Filename string
+	LocalID	string
 }
 
 type InsertResponse struct {
@@ -29,7 +30,7 @@ type InsertResponse struct {
 }
 
 type PutRequest struct {
-	FileInfo  FileInfo
+	Fileinfo  FileInfo
 	Block     Block
 }
 
@@ -40,11 +41,13 @@ type PutResponse struct {
 
 type GetRequest struct {
 	Filename  string
+	Offset    int64
+	Size	  int
 }
 
 type GetResponse struct {
-	Fileinfo  FileInfo
-	Block     Block
+	Eof     bool
+	Content []byte
 }
 
 type DeleteRequest struct {
