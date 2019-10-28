@@ -88,8 +88,8 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error{
 	}
 
 	fileSize := fileInfo.Size()
-	fmt.Printf("Put: filename = %s, size = %d\n, destination = %s", localfilepath, int(fileSize), c.Addr)
-	log.Printf("====Put: filename = %s, size = %d\n, destination = %s", localfilepath, int(fileSize), c.Addr)
+	fmt.Printf("Put: filename = %s, size = %d, destination = %s\n", localfilepath, int(fileSize), c.Addr)
+	log.Printf("====Put: filename = %s, size = %d, destination = %s\n", localfilepath, int(fileSize), c.Addr)
 
 
 	//Open the file
@@ -278,6 +278,8 @@ func GetFile(filenames []string){
 	}
 
 	client.Close()
+
+	//TODO: multiple downloads???
 
 	//Clear all .tmp file
 	err := os.RemoveAll(Config.TempfileDir)
