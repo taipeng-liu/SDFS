@@ -56,11 +56,15 @@ func RunNamenodeServer() {
 */
 
 func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
-	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu"}
+	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu",
+				     "fa19-cs425-g73-02.cs.illinois.edu",
+				     "fa19-cs425-g73-03.cs.illinois.edu"}
 	return nil
 }
 func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
-	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu"}
+	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu",
+				     "fa19-cs425-g73-02.cs.illinois.edu",
+				     "fa19-cs425-g73-03.cs.illinois.edu"}
 	return nil
 }
 
