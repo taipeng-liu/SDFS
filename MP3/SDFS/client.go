@@ -88,7 +88,9 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error{
 	}
 
 	fileSize := fileInfo.Size()
-	fmt.Printf("Put: filename = %s, size = %d\n", localfilepath, int(fileSize))
+	fmt.Printf("Put: filename = %s, size = %d\n, destination = %s", localfilepath, int(fileSize), c.Addr)
+	log.Printf("====Put: filename = %s, size = %d\n, destination = %s", localfilepath, int(fileSize), c.Addr)
+
 
 	//Open the file
 	localfile, err := os.Open(localfilepath)
@@ -159,9 +161,16 @@ func (c *Client) Get(sdfsfilename string, localfilename string, addr string) err
 		}
 	}
 
-	Config.CreateDirIfNotExist(Config.LocalfileDir)
+	localfilePath := Config.LocalfileDir + "/" + localfilename
+	fi, _ := tempfile.Stat()
+	filesize := int(fi.Size())
 
-	os.Rename(tempfilePath, Config.LocalfileDir + "/" + localfilename)
+	Config.CreateDirIfNotExist(Config.LocalfileDir)
+	os.Rename(tempfilePath, localfilePath)
+
+	fmt.Printf("Get localfile: filename = %s, size = %d, source = %s\n", localfilePath, filesize, addr)
+	log.Printf("Get localfile: filename = %s, size = %d, source = %s\n", localfilePath, filesize, addr)
+
 	return nil
 }
 
@@ -229,6 +238,8 @@ func PutFile(filenames []string){
 	client.Close()
 
 	fmt.Println("PutFile successfully return")
+	log.Println("====PutFile successfully return")
+	
 	return
 }
 
@@ -275,6 +286,8 @@ func GetFile(filenames []string){
 	}
 
 	fmt.Println("GetFile successfully return")
+	log.Println("====GetFile successfully return")
+
 	return
 }
 
@@ -311,6 +324,8 @@ func DeleteFile(filenames []string){
 
 	client.Close()
 	fmt.Println("DeleteFile successfully return")
+	log.Println("DeleteFile successfully return")
+	
 	return
 }
 
@@ -361,6 +376,7 @@ func Clear() {
 func listFile(dirPath string) {
 	Config.CreateDirIfNotExist(dirPath)
 	fmt.Printf("%s contains following files:\n", dirPath)
+	fmt.Println("filename   size")
 
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
@@ -368,7 +384,7 @@ func listFile(dirPath string) {
 	}
 
 	for _, file := range files {
-		fmt.Println(file.Name())
+		fmt.Printf("%s    %d\n",file.Name(), int(file.Size()))
 	}
 }
 

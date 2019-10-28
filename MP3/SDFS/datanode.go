@@ -79,10 +79,16 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
 		log.Println("sdfsfile.WriteAt() error",err)
 		return err
 	}
+	
 
 	if req.Eof {
+		fi, _ := tempfile.Stat()
+		filesize := int(fi.Size())
 		Config.CreateDirIfNotExist(Config.SdfsfileDir)
-		os.Rename(tempfilePath, Config.SdfsfileDir + "/" + req.Filename)
+		sdfsfilePath := Config.SdfsfileDir + "/" + req.Filename
+		os.Rename(tempfilePath, sdfsfilePath)
+		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
+		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
 	}
 
 	resp.Response = "ok"
