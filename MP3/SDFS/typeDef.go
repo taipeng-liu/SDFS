@@ -25,12 +25,14 @@ type InsertResponse struct {
 
 type PutRequest struct {
 	Filename  string
-	Block     Block
+	Eof 	  bool
+	Offset	  int64
+	Content   []byte
+	Hostname  string
 }
 
 type PutResponse struct {
-	Err       error
-	Statement string
+	Response string
 }
 
 type GetRequest struct {

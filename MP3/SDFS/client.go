@@ -81,18 +81,14 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error{
 
 	localfilepath := Config.LocalfileDir + "/" + localfilename
 
-	//Get filesize and total blocks	
-	fileStat, err := os.Stat(localfilepath)
+	//Get fileInfo
+	fileInfo, err := os.Stat(localfilepath)
 	if err != nil {
 		return err
 	}
 
-	fileSize := fileStat.Size()
-
-	totalblock := int(fileSize/Config.BLOCK_SIZE)
-	if fileSize%Config.BLOCK_SIZE != 0 {
-		totalblock += 1
-	}
+	fileSize := fileInfo.Size()
+	fmt.Printf("Put: filename = %s, size = %d\n", localfilepath, int(fileSize))
 
 	//Open the file
 	localfile, err := os.Open(localfilepath)
@@ -104,25 +100,31 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error{
 
 	//Send file by blocks
 	buf := make([]byte, Config.BLOCK_SIZE)
-	for blockIdx := 0; blockIdx < totalblock; blockIdx++ {
-		n, err := localfile.ReadAt(buf, int64(blockIdx)*Config.BLOCK_SIZE)
-		if err != nil && err != io.EOF {
-			return err
+	eof := false
+	hostname := Config.GetHostName()
+
+	for blockIdx := 0; !eof ; blockIdx++ {
+		offset := int64(blockIdx) * Config.BLOCK_SIZE
+		
+		n, err := localfile.ReadAt(buf, offset)
+		if err != nil {
+			if err != io.EOF{
+				return err
+			} else {
+				eof = true
+			}
 		}
 
-		block := Block{Idx    : blockIdx,
-			       Size   : int64(n),
-			       Content: buf[:n],}
-
-		req := PutRequest{sdfsfilename,block}
+		req := PutRequest{sdfsfilename,eof,offset,buf[:n],hostname}
 
 		var res PutResponse
 		if err = c.rpcClient.Call("Datanode.Put", req, &res); err != nil{
 			return err
 		}
 
-		if res.Err != nil {
-			return res.Err
+		if res.Response != "ok" {
+			log.Println(res.Response)
+			break
 		}
 	}
 
