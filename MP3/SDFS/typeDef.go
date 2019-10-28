@@ -6,12 +6,6 @@ type Block struct {
 	Content  []byte
 }
 
-type FileInfo struct {
-	Filename    string
-	Filesize    int
-	Totalblock  int
-}
-
 type FindRequest struct {
 	Filename string
 }

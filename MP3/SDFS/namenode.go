@@ -55,12 +55,15 @@ func RunNamenodeServer() {
 	Given a request, return response containing a list of all Datanodes who has the file
 */
 
+//TODO Implement GetDatanodeList
 func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
 	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu",
 				     "fa19-cs425-g73-02.cs.illinois.edu",
 				     "fa19-cs425-g73-03.cs.illinois.edu"}
 	return nil
 }
+
+//TODO Implement InsertFile
 func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu",
 				     "fa19-cs425-g73-02.cs.illinois.edu",
@@ -102,6 +105,13 @@ func (n *Namenode) InsertFile(req *InsertRequest, resp *InsertResponse) error {
 ///////////////////////////////////Member Function////////////////////////////
 
 //***Function: Simply add a new entry into Filemap, return added key and value
+
+//TODO 
+//Note: Map operation is not required to be implemented.
+//If we do, please implement them into FUNCTION, NOT METHOD.
+//The reason is that class Namenode is registered in RPC.
+//All methods of Namenode MUST have a standard format like
+//func (a Type) method([Valuable of Explicit Type], [Pointer of Explicit Type]) error{}
 
 /*
 func (n *Namenode) Add(nodeID string, sdfsfilename string) {

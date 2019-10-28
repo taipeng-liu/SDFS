@@ -340,10 +340,19 @@ func ShowDatanode(filenames []string){
 }
 
 func ShowFile() {
-	//listFile(Config.LocalfileDir)
+	listFile(Config.LocalfileDir) //TODO: Only for debugging, comment OUT in demo!
 	listFile(Config.SdfsfileDir)
 }
 
+//Remove all sdfsfiles stored in "SDFS/sdfsFile"
+func Clear() {
+	err := os.RemoveAll(Config.SdfsfileDir)
+	if err != nil {
+		log.Println("Clear() error")
+		return
+	}
+	fmt.Println("Clear all files in sdfsFile")
+}
 
 ///////////////////////////////////Helper functions/////////////////////////////////////////
 

@@ -74,6 +74,9 @@ func main() {
 		case "store":
 			log.Println("Main: Show all files")
 			go Sdfs.ShowFile()     //"SDFS/client.go"
+		case "clear":
+			log.Println("Main: clear directory sdfsFile")
+			go Sdfs.Clear()		//"SDFS/client.go"
 		default:
 			log.Println("Main: Don't support this command")
 		}
