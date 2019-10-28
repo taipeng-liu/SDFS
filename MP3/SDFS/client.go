@@ -226,7 +226,7 @@ func PutFile(filenames []string){
 	
 	client.Close()
 
-	log.Println("PutFile successfully return")
+	fmt.Println("PutFile successfully return")
 	return
 }
 
@@ -272,7 +272,7 @@ func GetFile(filenames []string){
 		log.Println("RemoveAll() error: can't remove TempfileDir")
 	}
 
-	log.Println("GetFile successfully return")
+	fmt.Println("GetFile successfully return")
 	return
 }
 
@@ -308,7 +308,7 @@ func DeleteFile(filenames []string){
 	}
 
 	client.Close()
-	log.Println("DeleteFile() successfully return")
+	fmt.Println("DeleteFile successfully return")
 	return
 }
 
@@ -348,6 +348,7 @@ func ShowFile() {
 ///////////////////////////////////Helper functions/////////////////////////////////////////
 
 func listFile(dirPath string) {
+	Config.CreateDirIfNotExist(dirPath)
 	fmt.Printf("%s contains following files:\n", dirPath)
 
 	files, err := ioutil.ReadDir(dirPath)
