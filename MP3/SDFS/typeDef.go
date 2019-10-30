@@ -1,9 +1,9 @@
 package sdfs
 
 type Block struct {
-	Idx      int
-	Size     int64
-	Content  []byte
+	Idx     int
+	Size    int64
+	Content []byte
 }
 
 type FindRequest struct {
@@ -16,7 +16,7 @@ type FindResponse struct {
 
 type InsertRequest struct {
 	Filename string
-	LocalID	string
+	LocalID  string
 }
 
 type InsertResponse struct {
@@ -24,11 +24,11 @@ type InsertResponse struct {
 }
 
 type PutRequest struct {
-	Filename  string
-	Eof 	  bool
-	Offset	  int64
-	Content   []byte
-	Hostname  string
+	Filename string
+	Eof      bool
+	Offset   int64
+	Content  []byte
+	Hostname string
 }
 
 type PutResponse struct {
@@ -36,9 +36,9 @@ type PutResponse struct {
 }
 
 type GetRequest struct {
-	Filename  string
-	Offset    int64
-	Size	  int
+	Filename string
+	Offset   int64
+	Size     int
 }
 
 type GetResponse struct {
@@ -47,7 +47,7 @@ type GetResponse struct {
 }
 
 type DeleteRequest struct {
-	Filename  string
+	Filename string
 }
 
 type DeleteResponse struct {

@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"strings"
 
-	Mem "./Membership"
 	Config "./Config"
+	Mem "./Membership"
 	Sdfs "./SDFS"
 )
 
-func Parse (cmd string) []string{
-	cmd = cmd[ : len(cmd)-1]
+func Parse(cmd string) []string {
+	cmd = cmd[:len(cmd)-1]
 	cmd = strings.Join(strings.Fields(cmd), " ")
 	return strings.Split(cmd, " ")
 }
@@ -61,10 +61,10 @@ func main() {
 			go Mem.ShowID()
 		case "put":
 			log.Println("Main: Put localfilename sdfsfilename")
-			go Sdfs.PutFile(parsedcmd[1:]) //"SDFS/client.go"
+			go Sdfs.PutFile(parsedcmd[1:], true) //"SDFS/client.go"
 		case "get":
 			log.Println("Main: Get sdfsfilename localfilename")
-			go Sdfs.GetFile(parsedcmd[1:]) //"SDFS/client.go"
+			go Sdfs.GetFile(parsedcmd[1:], true) //"SDFS/client.go"
 		case "delete":
 			log.Println("Main: Delete sdfsfile")
 			go Sdfs.DeleteFile(parsedcmd[1:]) //"SDFS/client.go"
@@ -73,10 +73,10 @@ func main() {
 			go Sdfs.ShowDatanode(parsedcmd[1:]) //"SDFS/client.go"
 		case "store":
 			log.Println("Main: Show all files")
-			go Sdfs.ShowFile()     //"SDFS/client.go"
+			go Sdfs.ShowFile() //"SDFS/client.go"
 		case "clear":
 			log.Println("Main: clear directory sdfsFile")
-			go Sdfs.Clear()		//"SDFS/client.go"
+			go Sdfs.Clear() //"SDFS/client.go"
 		default:
 			log.Println("Main: Don't support this command")
 		}

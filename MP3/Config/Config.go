@@ -1,21 +1,21 @@
 package config
 
 import (
+	"log"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
-	"os"
-	"log"
 )
 
 const (
-	LocalfileDir      = "SDFS/localFile"
-	SdfsfileDir       = "SDFS/sdfsFile"
-	TempfileDir	  = "SDFS/tempFile"
-	DatanodePort      = "8885"
-	NamenodePort      = "8884"
-	BLOCK_SIZE        =  512 * 1024
+	LocalfileDir = "SDFS/localFile"
+	SdfsfileDir  = "SDFS/sdfsFile"
+	TempfileDir  = "SDFS/tempFile"
+	DatanodePort = "8885"
+	NamenodePort = "8884"
+	BLOCK_SIZE   = 512 * 1024
 )
 
 const (
@@ -27,6 +27,7 @@ const (
 	ConnlocalHost     = "localhost"
 	TimeOut           = 4100
 	IntroducerAddress = "fa19-cs425-g73-01.cs.illinois.edu"
+	MasterAddress     = "fa19-cs425-g73-01.cs.illinois.edu"
 )
 
 func GetLocalfilePath(localfilename string) string {
@@ -40,7 +41,7 @@ func GetSdfsfilePath(sdfsfilename string) string {
 func CreateDirIfNotExist(dir string) {
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		err = os.MkdirAll(dir, 0755)
-		if err != nil{
+		if err != nil {
 			log.Println(err)
 		}
 	}
@@ -80,4 +81,32 @@ func GetVMNumber() int {
 func IsIntroducer() bool {
 	hostName := GetHostName()
 	return hostName == IntroducerAddress
+}
+
+func IsMaster() bool {
+	hostName := GetHostName()
+	return hostName == MasterAddress
+}
+
+//Clock-wise order: next 3 successors plus itself as replicas
+func GetReplica(localID string, memList []string) []string {
+	var replicaList []string
+
+	memListLen := len(memList)
+
+	if memListLen >= 4 {
+		for i, nodeID := range memList {
+			if nodeID == localID {
+				for j := 0; j < 4; j++ {
+					replicaList = append(replicaList, memList[(i+j+memListLen)%memListLen])
+				}
+				break
+			}
+		}
+	} else {
+		for _, nodeID := range memList {
+			replicaList = append(replicaList, nodeID)
+		}
+	}
+	return memList
 }

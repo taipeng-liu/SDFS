@@ -6,17 +6,18 @@ import (
 )
 
 const (
-	HeartbeatMsg = "Heartbeat"
-	JoinMsg      = "Join" //Content is empty
-	LeaveMsg     = "Leave"
-	FailMsg      = "Fail"
-	IntroduceMsg = "Introduce" // Content will include new-join node's ID
-	JoinAckMsg   = "JoinAck"   // Content will include full membership list
+	HeartbeatMsg        = "Heartbeat"
+	JoinMsg             = "Join" //Content is empty
+	LeaveMsg            = "Leave"
+	FailMsg             = "Fail"
+	IntroduceMsg        = "Introduce"        // Content will include new-join node's ID
+	JoinAckMsg          = "JoinAck"          // Content will include full membership list
 	IntroducerRejoinMsg = "IntroducerRejoin" //Content is empty
+	Election            = "Election"         // Content will include new master's NodeID
 )
 
 type Message struct {
-	MessageType string   //Heartbeat, Join, Leave, Introduce,(IntroduceAck?)
+	MessageType string   //Heartbeat, Join, Leave, Introduce, JoinAck, IntroducerRejoin, Election...
 	NodeID      string   //Local ID
 	Content     []string //Message Content
 }

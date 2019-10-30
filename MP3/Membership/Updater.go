@@ -1,15 +1,17 @@
 package membership
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 	"sort"
 	"time"
-	"fmt"
-	"encoding/json"
-	"io/ioutil"
-	"os"
 
 	MP "../MsgProtocol"
+	sdfs "../SDFS"
+	Config "../Config"
 )
 
 var MembershipList []string
@@ -47,27 +49,31 @@ func UpdateMemshipList(recvMsg MP.Message) bool {
 	if updateOk {
 		updateMemHBMap()
 		updateMonitorList()
+		//Todo: Should not go into this logic when there's no master
+		if Config.IsMaster() {
+			sdfs.UpdateNameNode(MembershipList)
+		}
 	}
 	return updateOk
 }
 
-func WriteMemtableToJsonFile(fileAddr string) error{
-	file, _ := json.MarshalIndent(MembershipList,""," ")
+func WriteMemtableToJsonFile(fileAddr string) error {
+	file, _ := json.MarshalIndent(MembershipList, "", " ")
 	err := ioutil.WriteFile(fileAddr, file, 0644)
 	return err
 }
 
-func ReadMemtableFromJsonFile(fileAddr string) ([]string, error){
+func ReadMemtableFromJsonFile(fileAddr string) ([]string, error) {
 	jsonFile, err := os.Open(fileAddr)
 	if err != nil {
 		log.Println(err)
-		return []string{},err
+		return []string{}, err
 	}
 
 	defer jsonFile.Close()
 
 	byteValue, _ := ioutil.ReadAll(jsonFile)
-	
+
 	var oldMemtable []string
 
 	json.Unmarshal(byteValue, &oldMemtable)
@@ -75,16 +81,15 @@ func ReadMemtableFromJsonFile(fileAddr string) ([]string, error){
 	return oldMemtable, nil
 }
 
-
 /////////////////////////////////////////////////////////////////////////
 
-func getListByRelateIndex(idxList []int) []string{
+func getListByRelateIndex(idxList []int) []string {
 	var newList []string
 	memListLen := len(MembershipList)
-	
+
 	if memListLen >= (len(idxList) + 1) {
 		for i, nodeID := range MembershipList {
-			if nodeID == LocalID{
+			if nodeID == LocalID {
 				for _, idx := range idxList {
 					newList = append(newList, MembershipList[(i+idx+memListLen)%memListLen])
 				}
@@ -93,7 +98,7 @@ func getListByRelateIndex(idxList []int) []string{
 		}
 	} else {
 		for _, nodeID := range MembershipList {
-			if nodeID != LocalID{
+			if nodeID != LocalID {
 				newList = append(newList, nodeID)
 			}
 		}
@@ -102,11 +107,11 @@ func getListByRelateIndex(idxList []int) []string{
 }
 
 func updateMonitorList() {
-	MonitorList = getListByRelateIndex([]int{-1,1,2})
+	MonitorList = getListByRelateIndex([]int{-1, 1, 2})
 }
 
 func updateMemHBMap() {
-	MemHBList := getListByRelateIndex([]int{-2,-1,1})
+	MemHBList := getListByRelateIndex([]int{-2, -1, 1})
 	if len(MemHBMap) == 0 {
 		for _, c := range MemHBList {
 			MemHBMap[c] = time.Now()
@@ -125,7 +130,7 @@ func updateMemHBMap() {
 }
 
 func addNode(newNodeID string) bool {
-	log.Printf("addNode(): Adding nodeID %s...\n",newNodeID)
+	log.Printf("addNode(): Adding nodeID %s...\n", newNodeID)
 	_, found := findNode(newNodeID)
 	if !found {
 		log.Println("addNode(): Successfully added!")

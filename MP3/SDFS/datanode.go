@@ -1,26 +1,24 @@
 package sdfs
 
-import(
+import (
 	"fmt"
+	"io"
 	"log"
 	"net"
-	"net/rpc"
 	"net/http"
+	"net/rpc"
 	"os"
-	"io"
 
 	Config "../Config"
 )
 
-type Datanode struct{
+type Datanode struct {
 	NamenodeAddr string
 }
 
-
-
 /////////////////////////////////////////Functions////////////////////////////////
 
-func RunDatanodeServer () {
+func RunDatanodeServer() {
 	var datanode = new(Datanode)
 	datanodeServer := rpc.NewServer()
 
@@ -41,11 +39,11 @@ func RunDatanodeServer () {
 	http.DefaultServeMux = oldMux
 	//================================
 
-	listener, err := net.Listen("tcp", ":" + Config.DatanodePort)
+	listener, err := net.Listen("tcp", ":"+Config.DatanodePort)
 	if err != nil {
 		log.Fatal("Listen error", err)
 	}
-	
+
 	fmt.Printf("===RunDatanodeServer: Listen on port %s\n", Config.DatanodePort)
 	err = http.Serve(listener, mux)
 	if err != nil {
@@ -53,19 +51,25 @@ func RunDatanodeServer () {
 	}
 }
 
+//***TODO: Start a new election and return new namnode's address
+func StartElection() string {
+	//
+	return Config.MasterAddress
+}
+
 //////////////////////////////////////Methods///////////////////////////////////
 
-func (d *Datanode) GetNamenodeAddr(req string, resp *string) error{
+func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 	//No namenode right now, start a selection process
 	if d.NamenodeAddr == "" {
 		d.NamenodeAddr = StartElection()
 	}
-	
+
 	*resp = d.NamenodeAddr
 	return nil
 }
 
-func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
+func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 	Config.CreateDirIfNotExist(Config.TempfileDir)
 	tempfilePath := Config.TempfileDir + "/" + req.Filename + "." + req.Hostname
 
@@ -76,10 +80,9 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
 	}
 
 	if _, err = tempfile.WriteAt(req.Content, req.Offset); err != nil {
-		log.Println("sdfsfile.WriteAt() error",err)
+		log.Println("sdfsfile.WriteAt() error", err)
 		return err
 	}
-	
 
 	if req.Eof {
 		fi, _ := tempfile.Stat()
@@ -87,7 +90,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
 		Config.CreateDirIfNotExist(Config.SdfsfileDir)
 		sdfsfilePath := Config.SdfsfileDir + "/" + req.Filename
 		os.Rename(tempfilePath, sdfsfilePath)
-		os.RemoveAll(Config.TempfileDir)
+		os.RemoveAll(tempfilePath)
 
 		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
 		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
@@ -98,7 +101,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error{
 	return nil
 }
 
-func (d *Datanode) Get(req GetRequest, resp *GetResponse) error{
+func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
 	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
 
 	//Open file
@@ -114,29 +117,23 @@ func (d *Datanode) Get(req GetRequest, resp *GetResponse) error{
 
 	n, err := sdfsfile.ReadAt(buf, req.Offset)
 	if err != nil {
-		if err != io.EOF{
+		if err != io.EOF {
 			return err
 		} else {
 			resp.Eof = true
 		}
 	}
-	
+
 	resp.Content = buf[:n]
 
 	return nil
 }
 
-func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error{
+func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error {
 	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
 
-	if err := os.Remove(sdfsfilepath); err != nil{
+	if err := os.Remove(sdfsfilepath); err != nil {
 		return err
 	}
 	return nil
 }
-
-func StartElection() string{
-	//TODO modify it
-	return "fa19-cs425-g73-01.cs.illinois.edu"
-}
-
