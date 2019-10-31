@@ -113,13 +113,23 @@ func UpdateNameNode(newMemList []string) {
 func updateMap(addList []string, deleteList []string) map[string]bool {
 	//Set of sdfsfile to be re-replicated
 	repFileSet := make(map[string]bool)
+	// repFileSet := []string
 	fmt.Printf("addList'size is %d!!\n", len(addList))
 	fmt.Printf("deleteList'size is %d!!\n", len(deleteList))
 
 	for _, nodeID := range deleteList {
+		// fmt.Printf("Length of nodemap[%s] is: %d!!\n", nodeID, len(namenode.Nodemap[nodeID]))
+		if len(namenode.Nodemap[nodeID]) == 0 {
+			// fmt.Printf("Nothing to be delete for node %s\n!!", nodeID)
+			continue
+		}
 		for _, fileName := range namenode.Nodemap[nodeID] {
-			if _, ok := repFileSet[fileName]; !ok {
+			if ifExist, ok := repFileSet[fileName]; !ok && !ifExist {
 				repFileSet[fileName] = true
+				ifExist = true
+				// fmt.Printf("What???? Find file %s in node %s??\n", fileName, nodeID)
+			} else {
+				log.Printf("file alreay exist in repFileSet!\n")
 			}
 		}
 		delete(namenode.Nodemap, nodeID)
@@ -128,6 +138,9 @@ func updateMap(addList []string, deleteList []string) map[string]bool {
 	}
 
 	fmt.Printf("repFileSet'size is %d!!\n", len(repFileSet))
+	for _, fileName := range repFileSet {
+		fmt.Printf("file %s will be re-Replicate!!\n", fileName)
+	}
 
 	//Reassign replicas for this file
 	for sdfsFileName := range repFileSet {
@@ -210,6 +223,28 @@ func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 	// n.Filemap[InsertRequest.Filename] = datanodeList
 
 	resp.DatanodeList = datanodeList
+	return nil
+}
+
+func (n *Namenode) DeleteFile(req DeleteRequest, resp *DeleteResponse) error {
+
+	var findFlag bool = false
+	delete(n.Filemap, req.Filename)
+	for nodeID, nodeFile := range n.Nodemap {
+		for idx, fileName := range nodeFile {
+			if req.Filename == fileName {
+				fmt.Printf("Delete Entry for File %s in %s!!\n", fileName, nodeID)
+				nodeFile = append(nodeFile[:idx], nodeFile[idx+1:]...)
+				fmt.Printf("NodeMap for nodeID %s is: %d!!\n", nodeID, len(nodeFile))
+				findFlag = true
+				break
+			}
+		}
+		n.Nodemap[nodeID] = nodeFile
+	}
+	if !findFlag {
+		resp.Statement = "No such File??"
+	}
 	return nil
 }
 

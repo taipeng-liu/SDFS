@@ -105,7 +105,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 		Config.CreateDirIfNotExist(Config.SdfsfileDir)
 		sdfsfilePath := Config.SdfsfileDir + "/" + req.Filename
 		os.Rename(tempfilePath, sdfsfilePath)
-		os.RemoveAll(tempfilePath)
+		os.RemoveAll(Config.TempfileDir)
 
 		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
 		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
