@@ -11,7 +11,6 @@ import (
 
 	MP "../MsgProtocol"
 	sdfs "../SDFS"
-	Config "../Config"
 )
 
 var MembershipList []string
@@ -50,9 +49,11 @@ func UpdateMemshipList(recvMsg MP.Message) bool {
 		updateMemHBMap()
 		updateMonitorList()
 		//Todo: Should not go into this logic when there's no master
-		if Config.IsMaster() {
+		sdfs.UpdataDatanode(MembershipList)
+		if sdfs.IsMaster() {
 			sdfs.UpdateNameNode(MembershipList)
 		}
+		sdfs.UpdateMaster()
 	}
 	return updateOk
 }

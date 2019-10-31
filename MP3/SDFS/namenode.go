@@ -7,16 +7,23 @@ import (
 	"net/http"
 	"net/rpc"
 	"reflect"
+	"time"
 
 	Config "../Config"
 )
 
 var namenode = new(Namenode)
 
+type Metadata struct {
+	DatanodeList []string
+	LastWrtTime  time.Time
+}
+
 type Namenode struct {
-	Filemap        map[string][]string //Key: sdfsFileName  Value: Arraylist of replica node
+	Filemap        map[string][]string //Key: sdfsFileName  Value: Arraylist of datanode
 	Nodemap        map[string][]string //Key: NodeID  Value: Arraylist of sdfsFileName
 	MembershipList []string
+	Filetime       map[string]time.Time
 }
 
 //////////////////////////////////////////Functions////////////////////////////////////////////
@@ -25,6 +32,7 @@ func RunNamenodeServer() {
 
 	namenode.Filemap = make(map[string][]string)
 	namenode.Nodemap = make(map[string][]string)
+	namenode.Filetime = make(map[string]time.Time)
 
 	namenodeServer := rpc.NewServer()
 
@@ -171,23 +179,8 @@ func reReplicate(repFileSet map[string]bool) {
 	Given a request, return response containing a list of all Datanodes who has the file
 */
 
-/*TODO Implement GetDatanodeList
 func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
-	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu",
-				     "fa19-cs425-g73-02.cs.illinois.edu",
-				     "fa19-cs425-g73-03.cs.illinois.edu"}
-	return nil
-}
-
-TODO Implement InsertFile
-func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
-	resp.DatanodeList = []string{"fa19-cs425-g73-01.cs.illinois.edu",
-				     "fa19-cs425-g73-02.cs.illinois.edu",
-				     "fa19-cs425-g73-03.cs.illinois.edu"}
-	return nil
-}
-*/
-func (n *Namenode) GetDatanodeList(req *FindRequest, resp *FindResponse) error {
+	fmt.Printf("***namenode*** Enter GetDatanodeList! Filemap length is: %d!\n", len(n.Filemap))
 	if _, ok := n.Filemap[req.Filename]; ok {
 		resp.DatanodeList = n.Filemap[req.Filename]
 	} else {
@@ -203,15 +196,16 @@ func (n *Namenode) GetDatanodeList(req *FindRequest, resp *FindResponse) error {
 */
 func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 
-	datanodeList := Config.GetReplica(req.LocalID, namenode.MembershipList)
+	datanodeList := Config.GetReplica(req.Hostname, namenode.MembershipList)
 	fmt.Println("GetReplica succeed! datanodeList'size is: %d!!\n", len(datanodeList))
 	log.Println("GetReplica succeed! datanodeList'size is: %d!!\n", len(datanodeList))
 
 	for _, datanodeID := range datanodeList {
-		fmt.Printf("**namenode**: Insert sdfsfile: %s to %s from %s\n", req.Filename, datanodeID, req.LocalID)
-		log.Printf("**namenode**: Insert sdfsfile: %s to %s from %s\n", req.Filename, datanodeID, req.LocalID)
+		fmt.Printf("**namenode**: Insert sdfsfile: %s to %s from %s\n", req.Filename, datanodeID, req.Hostname)
+		log.Printf("**namenode**: Insert sdfsfile: %s to %s from %s\n", req.Filename, datanodeID, req.Hostname)
 		n.Filemap[req.Filename] = append(n.Filemap[req.Filename], datanodeID)
 		n.Nodemap[datanodeID] = append(n.Nodemap[datanodeID], req.Filename)
+		n.Filetime[req.Filename] = time.Now()
 	}
 	// n.Filemap[InsertRequest.Filename] = datanodeList
 
@@ -219,38 +213,27 @@ func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 	return nil
 }
 
-//TODO
-//Note: Map operation is not required to be implemented.
-//If we do, please implement them into FUNCTION, NOT METHOD.
-//The reason is that class Namenode is registered in RPC.
-//All methods of Namenode MUST have a standard format like
-//func (a Type) method([Valuable of Explicit Type], [Pointer of Explicit Type]) error{}
-
 /*
-func (n *Namenode) Add(nodeID string, sdfsfilename string) {
-	return
-}
-
-func (n *Namenode) Delete() {
-	//TODO
-	//delete an item from filemap by key
-	//return deleted key and value
-	return
-}
-
-func (n *Namenode) Find() {
-	//TODO
-	//find value by key
-	//return value if found or nil
-	return
-}
-
-func (n *Namenode) Update() {
-	//TODO
-	//modify value by key
-	//return modified key and value
-	return
-}
-
-
+	First check if the client MUST write to file. If not, check Filemap
+	and calculate time difference to dicide whether give write permission.
 */
+func (n *Namenode) GetWritePermission(req PermissionRequest, res *bool) error {
+	if req.MustWrite {
+		*res = true
+		n.Filetime[req.Filename] = time.Now()
+	} else {
+		//Check if (curTime - lastWrtTime) > 60 s
+		curTime := time.Now()
+		lastWrtTime := n.Filetime[req.Filename]
+		timeDiff := curTime.Sub(lastWrtTime)
+
+		if int64(timeDiff)-int64(60*time.Second) > 0 {
+			*res = true
+			n.Filetime[req.Filename] = curTime
+		} else {
+			*res = false
+		}
+	}
+
+	return nil
+}

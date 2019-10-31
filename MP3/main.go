@@ -77,6 +77,12 @@ func main() {
 		case "clear":
 			log.Println("Main: clear directory sdfsFile")
 			go Sdfs.Clear() //"SDFS/client.go"
+		case "y":
+			Sdfs.YESorNO <- true
+			Sdfs.KillTimeOut30s <- ""
+		case "n":
+			Sdfs.YESorNO <- false
+			Sdfs.KillTimeOut30s <- ""
 		default:
 			log.Println("Main: Don't support this command")
 		}

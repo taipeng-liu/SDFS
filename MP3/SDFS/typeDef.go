@@ -16,11 +16,16 @@ type FindResponse struct {
 
 type InsertRequest struct {
 	Filename string
-	LocalID  string
+	Hostname string
 }
 
 type InsertResponse struct {
 	DatanodeList []string
+}
+
+type PermissionRequest struct {
+	Filename  string
+	MustWrite bool
 }
 
 type PutRequest struct {

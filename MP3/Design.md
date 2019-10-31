@@ -3,17 +3,21 @@
 
 ## Protocol Design 
 ```
-We implement RPC client and servers in this MP. Servers include one Namenode(i.e. master) and N Datanodes (i.e. slave), in this case N = 10. 
+We employ RPC to implement our client and servers model in this MP. Servers include one Namenode(i.e. master) and N Datanodes (i.e. slave), in this case N = 10. 
 
 Algorithm: User type the command in main function. Main function parse the command and call corresponding function in client.go (e.g. type command `put localfilename sdfsfilename`, main function will call `PutFile([]string{localfilename, sdfsfilename})`in client. 
 
-How dose `PutFile` work? Firstly, client RPCs Namenode a `FindRequest`. When Namenode receive a `FindRequest`, it will figure out a list of datanodes who should save the file into `FindResponse`, and then return `FindResponse`. Then, client can get DatanodeList that contains the NodeID of datanode who should be put the file in. Client iterates the list, and in each iteration, client RPC datanode by `c.rpcClient.Call` and send file.
+How dose client functions work in RPC?
 
-How dose other client functions work? Much similar to `PutFile`.
+Take `PutFile` as an example. Firstly, client RPCs Namenode a `FindRequest`. When Namenode receive a `FindRequest`, it will figure out a list of datanodes who should save the file into `FindResponse`, and then return `FindResponse`. Then, client can get DatanodeList that contains the NodeID of datanode who should be put the file in. Client iterates the list, and in each iteration, client RPC datanode by `c.rpcClient.Call` and send file.
+
+Other RPC call is much similar to `PutFile`.
 
 How to RPC Namenode/Datanode? We use tcp call the Namenode/Datanode with address "NamenodeAddr"+":"+Config.NamenodePort/"Datanode"+":"+Config.DatanodePort. NamenodePort and DatanodePort are consts defined in "Config/Config.go" (is currently 8885 and 8884). Struct and methods of Namenode and Datanode are all in RPC standard format which can be called by RPC client. For example, in client.go, we have `c.rpcClient.Call("Datanode.Put", putRequest, &putResponse)`, where c is a "Client" type structure, putRequest has type "PutRequest" and putResponse has type "PutResponse".
 
 How to send a file? A file is sent by blocks. BLOCK_SIZE is a const defined in "Config/Config.go" (is currently 512). `PutRequest` has two contents: FileInfo, Block. FileInfo is the payload of file, and Block is the byte data to be transferred.
+
+How does election works? Our raw idea is to always . Maybe refer to "Bully Algorithm" to implement a more sophisticated one
 ```
 
 ### Definition
@@ -25,10 +29,10 @@ Keyword: Client, Namenode, Datanode, several request/response types...
 #### main.go
 ```
 Calls the following function
-"Join"          -> RunDatanodeServer    at datanode.go
-Not Decided     -> RunNamenodeServer    at namenode.go
+"join"          -> RunDatanodeServer    at datanode.go
+			    -> RunNamenodeServer    at namenode.go
 "put lfn sfn"   -> PutFile              at client.go
-"get sfn lfn"   -> GetFile		at client.go
+"get sfn lfn"   -> GetFile				at client.go
 "delete sfn"    -> DeleteFile		at client.go
 "ls"            -> ShowDatanode 	at client.go
 "store"         -> ShowFile		at client.go
@@ -36,9 +40,9 @@ Not Decided     -> RunNamenodeServer    at namenode.go
 
 #### client.go
 ```
-PutFile		-> client.GetDatanodeList	-> client.Put//TODO
-GetFile		-> client.GetDatanodeList	-> client.Get//TODO
-DeleteFile	-> client.GetDatanodeList	-> client.Delete//TODO
+PutFile		-> client.GetDatanodeList	-> client.Put
+GetFile		-> client.GetDatanodeList	-> client.Get
+DeleteFile	-> client.GetDatanodeList	-> client.Delete
 ShowDatanode	-> client.GetDatanodeList 	-> print the list
 ShowFile	-> listFile(Config.LocalfilePath) & listFile(Config.SdfsfilePath)
 
@@ -48,16 +52,26 @@ GetDatanodeList -> Namenode.GetDatanodeList	-> return DatanodeList
 
 #### namenode.go
 ```
-GetDatanodeList //TODO
+GetDatanodeList 
 
-RunNamenodeServer //TODO
+UpdateNameNode
+
+InsertFile
+
+RunNamenodeServer
+
+updateMap
+
+reReplicate
 ```
 #### datanode.go
 ```
-Put 	//TODO
-Get 	//TODO
-Delete	//TODO
-Find	//TODO
+Put 	
+Get 	
+Delete	
+Find
+GetNamenodeAddr
+UpdateMaster
 
 RunNamenodeServer
 ```
@@ -120,6 +134,14 @@ When and where to call RunNamenodeServer? --- When RPC call GetNamenodeAddr retu
 How to elect? Simplified Bully Algorithm? --- Come Without Timer
 Should we use Membership List in Failure Detect Protocol or just Full-Process List 
 
+```
+
+### 10.30
+```
+Fix one-minute put command gap check bug
+How to implement sophisticated election protocol?     
+How to handle duplicate Write/Put in one file? 
+Pending: Test system in nodes-failure scenario
 ```
 
 ## Demo Instruction
