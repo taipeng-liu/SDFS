@@ -10,18 +10,19 @@ import (
 	"os"
 
 	Config "../Config"
+	Mem "../Membership"
 )
 
-var datanode = new(Datanode)
-
 type Datanode struct {
-	NamenodeAddr   string
-	MembershipList []string
+	NamenodeID   string   //NodeID, not Address
+	FileList     []string //list of sdfsfile
 }
 
 /////////////////////////////////////////Functions////////////////////////////////
 
 func RunDatanodeServer() {
+	var datanode = new(Datanode)
+
 	datanodeServer := rpc.NewServer()
 
 	err := datanodeServer.Register(datanode)
@@ -51,43 +52,66 @@ func RunDatanodeServer() {
 	if err != nil {
 		log.Fatal("Serve(listener, nil) error: ", err)
 	}
-}
-
-func UpdataDatanode(newMemList []string) {
-	datanode.MembershipList = newMemList
-}
-
-//When former master fails/leaves, update master/ start new election
-func UpdateMaster() {
-	//Todo: Prune this algorithm?
-	//For now, Always set the first in MembershipList as Master
-	datanode.NamenodeAddr = Config.GetIPAddressFromID(datanode.MembershipList[0])
-
-}
-
-//Check if is this datanode is namenode
-func IsMaster() bool {
-	hostName := Config.GetHostName()
-	return hostName == datanode.NamenodeAddr
+	
+	go WaitingForFailedNodeID()    //helper function at client.go
 }
 
 //////////////////////////////////////Methods///////////////////////////////////
 
 func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 	//No namenode right now, start a selection process
-	if d.NamenodeAddr == "" {
-		fmt.Println("Error!! no master!! Namenode Field is empty")
-		// d.NamenodeAddr = NewElection()
+	if d.NamenodeID == "" {
+		fmt.Println("Figure out the new namenode")
+		//TODO New namenode election strategy
+		d.NamenodeID = Mem.MembershipList[0]
+
+		//If IsMaster(), run namenode server
+		if d.NamenodeID == Mem.LocalID {
+			OpenNamenodeServer <- ""
+		}
 	}
-	fmt.Printf("Namenode Address is: %s!!\n", d.NamenodeAddr)
-	*resp = d.NamenodeAddr
+
+	fmt.Printf("NamenodeID is: %s\n", d.NamenodeID)
+	*resp = Config.GetIPAddressFromID(d.NamenodeID)
 	return nil
 }
 
+
+//This RPC method will be called from client.go when a node fail/leave
+func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
+	if failedNodeID != d.NamenodeID {
+		//Namenode is still alive, don't update namenodeID
+		*resp = false
+
+		//If this datanode is master, update Filemap
+		if d.NamenodeID == Mem.LocalID {
+			UpdateFilemapChan <- failedNodeID
+		}
+	}else {
+		//Namenode fails, update namenodeID locally
+		//If this datanode is master, run namenode server
+		*resp = true
+		d.NamenodeID = Mem.MembershipList[0]
+
+		if d.NamenodeID == Mem.LocalID {
+			OpenNamenodeServer <- ""
+		}
+	}
+
+	return nil
+}
+
+func (d *Datanode) GetFileList(req string, res *[]string) error{
+	*res = d.FileList
+	return nil
+}
+
+//Save contents of "sdfsfile" from client
 func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 	Config.CreateDirIfNotExist(Config.TempfileDir)
 	tempfilePath := Config.TempfileDir + "/" + req.Filename + "." + req.Hostname
 
+	//Open and write
 	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		log.Println("os.OpenFile() error")
@@ -99,13 +123,16 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 		return err
 	}
 
+	//Write EOF, save file
 	if req.Eof {
 		fi, _ := tempfile.Stat()
 		filesize := int(fi.Size())
 		Config.CreateDirIfNotExist(Config.SdfsfileDir)
 		sdfsfilePath := Config.SdfsfileDir + "/" + req.Filename
+
 		os.Rename(tempfilePath, sdfsfilePath)
 		os.RemoveAll(tempfilePath)
+		d.FileList = append(d.FileList, req.Filename)
 
 		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
 		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
@@ -116,6 +143,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 	return nil
 }
 
+//Send contents of "sdfsfile" to client
 func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
 	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
 
@@ -144,11 +172,22 @@ func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
 	return nil
 }
 
+//Delete "sdfsfile"
 func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error {
+
 	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
 
 	if err := os.Remove(sdfsfilepath); err != nil {
 		return err
 	}
+
+	//Assume deleted file can be found in FileList
+	for idx, filename := range d.FileList {
+		if filename == req.Filename {
+			d.FileList = append(d.FileList[:idx], d.FileList[idx+1:]...)
+			break
+		}
+	}
+
 	return nil
 }

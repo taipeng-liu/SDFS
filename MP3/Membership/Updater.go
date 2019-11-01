@@ -10,29 +10,33 @@ import (
 	"time"
 
 	MP "../MsgProtocol"
-	sdfs "../SDFS"
 )
 
 var MembershipList []string
 var MemHBMap map[string]time.Time = make(map[string]time.Time)
 var MonitorList []string
 var MayFailMap map[string]time.Time = make(map[string]time.Time)
+var FailedNodeID chan string = make(chan string)
 
 func UpdateMemshipList(recvMsg MP.Message) bool {
 	msgType := recvMsg.MessageType
 	senderID := recvMsg.NodeID
 	contents := recvMsg.Content
 	var updateOk bool
+	var failedNodeID string
+
 	switch msgType {
 	case MP.JoinMsg:
 		updateOk = addNode(senderID)
 	case MP.LeaveMsg:
+		failedNodeID = contents[0]
 		if contents[0] == LocalID {
 			updateOk = true
 		} else {
 			updateOk = deleteNode(contents[0])
 		}
 	case MP.FailMsg:
+		failedNodeID = contents[0]
 		updateOk = deleteNode(contents[0])
 	case MP.IntroduceMsg:
 		updateOk = addNode(contents[0])
@@ -45,14 +49,14 @@ func UpdateMemshipList(recvMsg MP.Message) bool {
 	default:
 		updateOk = false
 	}
+
+	//updateOk means that membershiplist changes because of add/fail node
 	if updateOk {
 		updateMemHBMap()
 		updateMonitorList()
-		//Todo: Test if this works
-		sdfs.UpdataDatanode(MembershipList)
-		sdfs.UpdateMaster()
-		if sdfs.IsMaster() {
-			sdfs.UpdateNameNode(MembershipList)
+		//If a node is deleted, inform datanode to update its namenodeID
+		if failedNodeID != "" {
+			FailedNodeID <- failedNodeID
 		}
 	}
 	return updateOk
@@ -84,13 +88,13 @@ func ReadMemtableFromJsonFile(fileAddr string) ([]string, error) {
 
 /////////////////////////////////////////////////////////////////////////
 
-func getListByRelateIndex(idxList []int) []string {
+func GetListByRelateIndex(curNodeID string, idxList []int) []string {
 	var newList []string
 	memListLen := len(MembershipList)
 
 	if memListLen >= (len(idxList) + 1) {
 		for i, nodeID := range MembershipList {
-			if nodeID == LocalID {
+			if nodeID == curNodeID {
 				for _, idx := range idxList {
 					newList = append(newList, MembershipList[(i+idx+memListLen)%memListLen])
 				}
@@ -99,7 +103,7 @@ func getListByRelateIndex(idxList []int) []string {
 		}
 	} else {
 		for _, nodeID := range MembershipList {
-			if nodeID != LocalID {
+			if nodeID != curNodeID {
 				newList = append(newList, nodeID)
 			}
 		}
@@ -108,11 +112,11 @@ func getListByRelateIndex(idxList []int) []string {
 }
 
 func updateMonitorList() {
-	MonitorList = getListByRelateIndex([]int{-1, 1, 2})
+	MonitorList = GetListByRelateIndex(LocalID, []int{-1, 1, 2})
 }
 
 func updateMemHBMap() {
-	MemHBList := getListByRelateIndex([]int{-2, -1, 1})
+	MemHBList := GetListByRelateIndex(LocalID, []int{-2, -1, 1})
 	if len(MemHBMap) == 0 {
 		for _, c := range MemHBList {
 			MemHBMap[c] = time.Now()

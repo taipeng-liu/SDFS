@@ -9,9 +9,8 @@ import (
 	"os"
 	"time"
 
-	//"sync"
-
 	Config "../Config"
+	Mem "../Membership"
 )
 
 const (
@@ -58,8 +57,7 @@ func (c *Client) GetDatanodeList(filename string) ([]string, int) {
 
 func (c *Client) InsertFile(filename string) ([]string, int) {
 	var res InsertResponse
-	hostName := Config.GetHostName()
-	if err := c.rpcClient.Call("Namenode.InsertFile", InsertRequest{Filename: filename, Hostname: hostName}, &res); err != nil {
+	if err := c.rpcClient.Call("Namenode.InsertFile", InsertRequest{filename, Mem.LocalID}, &res); err != nil {
 		return []string{}, 0
 	}
 
@@ -170,21 +168,21 @@ func (c *Client) Get(sdfsfilename string, localfilename string, toLocal bool, ad
 		}
 	}
 
-	var localfilePath string
+	var filePath string
 	if toLocal {
-		localfilePath = Config.LocalfileDir + "/" + localfilename
+		filePath = Config.LocalfileDir + "/" + localfilename
 	} else {
-		localfilePath = Config.SdfsfileDir + "/" + localfilename
+		filePath = Config.SdfsfileDir + "/" + localfilename
 	}
 
 	fi, _ := tempfile.Stat()
 	filesize := int(fi.Size())
 
 	Config.CreateDirIfNotExist(Config.LocalfileDir)
-	os.Rename(tempfilePath, localfilePath)
+	os.Rename(tempfilePath, filePath)
 
-	fmt.Printf("Get localfile: filename = %s, size = %d, source = %s\n", localfilePath, filesize, addr)
-	log.Printf("Get localfile: filename = %s, size = %d, source = %s\n", localfilePath, filesize, addr)
+	fmt.Printf("Get file: filename = %s, size = %d, source = %s\n", filePath, filesize, addr)
+	log.Printf("Get file: filename = %s, size = %d, source = %s\n", filePath, filesize, addr)
 
 	return nil
 }
@@ -200,12 +198,15 @@ func (c *Client) Delete(sdfsfilename string) error {
 }
 
 func (c *Client) DeleteFileMetadata(sdfsfilename string) error {
-	req := DeleteRequest{sdfsfilename}
-	var res DeleteResponse
+	var res bool
 
-	if err := c.rpcClient.Call("Namenode.DeleteFile", req, &res); err != nil {
+	if err := c.rpcClient.Call("Namenode.DeleteFileMetaData", sdfsfilename, &res); err != nil {
 		return err
 	}
+	if !res {
+		fmt.Printf("Can't find filemetadata of %s in Filemap\n", sdfsfilename)
+	}
+
 	return nil
 }
 
@@ -457,6 +458,22 @@ func GetNamenodeAddr() string {
 	return resp
 }
 
+//Whenever client receive a filaedNodeID from updater, it calls datanode
+func WaitingForFailedNodeID() {
+	for {
+		failedNodeID := <- Mem.FailedNodeID
+
+		var updateOK bool
+
+		client := NewClient("localhost" + ":" + Config.DatanodePort)
+		client.Dial()
+
+		client.rpcClient.Call("Datanode.UpdateNamenodeID", failedNodeID, &updateOK)
+		
+		client.Close()
+	}
+}
+
 func listFile(dirPath string) {
 	Config.CreateDirIfNotExist(dirPath)
 	fmt.Printf("===%s contains following files:\n", dirPath)
@@ -478,7 +495,7 @@ func RpcOperationAt(operation string, localfilename string, sdfsfilename string,
 
 	switch operation {
 	case "put":
-		client.Put(localfilename, sdfsfilename)
+		client.Put(localfilename, sdfsfilename) //TODO : isLocal???
 	case "get":
 		client.Get(sdfsfilename, localfilename, isLocal, addr)
 	case "delete":

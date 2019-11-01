@@ -6,33 +6,36 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
-	"reflect"
 	"time"
+	"sort"
 
 	Config "../Config"
+	Mem "../Membership"
 )
 
-var namenode = new(Namenode)
+var OpenNamenodeServer chan string = make(chan string)
+var UpdateFilemapChan chan string = make(chan string)  //Receive failedNodeID
 
-type Metadata struct {
+type FileMetadata struct {
 	DatanodeList []string
 	LastWrtTime  time.Time
 }
 
 type Namenode struct {
-	Filemap        map[string][]string //Key: sdfsFileName  Value: Arraylist of datanode
-	Nodemap        map[string][]string //Key: NodeID  Value: Arraylist of sdfsFileName
-	MembershipList []string
-	Filetime       map[string]time.Time
+	Filemap map[string]*FileMetadata  //Key:sdfsFilename  Value:Pointer of metadata
+	Nodemap map[string][]string 	  //Key:NodeID        Value:Pointer of fileList
 }
 
 //////////////////////////////////////////Functions////////////////////////////////////////////
 
 func RunNamenodeServer() {
 
-	namenode.Filemap = make(map[string][]string)
+	<- OpenNamenodeServer
+
+	var namenode = new(Namenode)
+
+	namenode.Filemap = make(map[string]*FileMetadata)
 	namenode.Nodemap = make(map[string][]string)
-	namenode.Filetime = make(map[string]time.Time)
 
 	namenodeServer := rpc.NewServer()
 
@@ -64,126 +67,32 @@ func RunNamenodeServer() {
 		log.Fatal("Serve(listener, nil) error: ", err)
 	}
 
+	getCurrentMaps(namenode.Filemap, namenode.Nodemap)
+	go WaitUpdateFilemapChan(namenode.Filemap, namenode.Nodemap)
 }
 
-//***Call from Updater , pending: use channel to update
-func UpdateNameNode(newMemList []string) {
-	var addList, deleteList []string
-	mapEq := reflect.DeepEqual(newMemList, namenode.MembershipList)
-	if !mapEq {
-		var newIdx, oldIdx int
-		for newIdx, oldIdx = 0, 0; newIdx < len(newMemList) && oldIdx < len(namenode.MembershipList); {
-			if newMemList[newIdx] == namenode.MembershipList[oldIdx] {
-				newIdx++
-				oldIdx++
-			} else {
-				//*** Todo: check validity
-				if newMemList[newIdx] < namenode.MembershipList[oldIdx] {
-					addList = append(addList, newMemList[newIdx])
-					fmt.Printf("===New Added Node:%s\n", newMemList[newIdx])
-					log.Printf("===New Added Node:%s\n", newMemList[newIdx])
-					newIdx++
-				} else {
-					deleteList = append(deleteList, namenode.MembershipList[oldIdx])
-					fmt.Printf("===Deleted Node:%s\n", namenode.MembershipList[oldIdx])
-					log.Printf("===Deleted Node:%s\n", namenode.MembershipList[oldIdx])
-					oldIdx++
-				}
-			}
-		}
-		for ; newIdx < len(newMemList); newIdx++ {
-			addList = append(addList, newMemList[newIdx])
-			fmt.Printf("===New Added Node:%s\n", newMemList[newIdx])
-			log.Printf("===New Added Node:%s\n", newMemList[newIdx])
-		}
-		for ; oldIdx < len(namenode.MembershipList); oldIdx++ {
-			deleteList = append(deleteList, namenode.MembershipList[oldIdx])
-			fmt.Printf("===Deleted Node:%s\n", namenode.MembershipList[oldIdx])
-			log.Printf("===Deleted Node:%s\n", namenode.MembershipList[oldIdx])
-		}
-	}
+func WaitUpdateFilemapChan(Filemap map[string]*FileMetadata, Nodemap map[string][]string) {
+	for {
+		failedNodeID := <- UpdateFilemapChan
 
-	namenode.MembershipList = newMemList
-	fmt.Printf("namenode.MembershipList'size is %d!!\n", len(namenode.MembershipList))
-	repFileSet := updateMap(addList, deleteList)
-	reReplicate(repFileSet)
-}
+		//If failed nodeID can be found in Nodemap
+		if reReplicaFileList, ok := Nodemap[failedNodeID]; ok {
+			//delete from Nodemap
+			delete(Nodemap, failedNodeID)
 
-//***Update two essential maps
-func updateMap(addList []string, deleteList []string) map[string]bool {
-	//Set of sdfsfile to be re-replicated
-	repFileSet := make(map[string]bool)
-	fmt.Printf("addList'size is %d!!\n", len(addList))
-	fmt.Printf("deleteList'size is %d!!\n", len(deleteList))
-
-	for _, nodeID := range deleteList {
-		// log.Printf("Length of nodemap[%s] is: %d!!\n", nodeID, len(namenode.Nodemap[nodeID]))
-		if len(namenode.Nodemap[nodeID]) == 0 {
-			log.Printf("Nothing to be delete for node %s\n!!", nodeID)
-			continue
-		}
-		for _, fileName := range namenode.Nodemap[nodeID] {
-			if ifExist, ok := repFileSet[fileName]; !ok && !ifExist {
-				repFileSet[fileName] = true
-				ifExist = true
-				// fmt.Printf("What???? Find file %s in node %s??\n", fileName, nodeID)
-			} else {
-				log.Printf("file alreay exist in repFileSet!\n")
-			}
-		}
-		delete(namenode.Nodemap, nodeID)
-		fmt.Printf("updateMap: Remove nodeID: %s from NodeMap!!!\n", nodeID)
-		log.Printf("updateMap: Remove nodeID: %s from NodeMap!!!\n", nodeID)
-	}
-
-	fmt.Printf("repFileSet'size is %d!!\n", len(repFileSet))
-	for _, fileName := range repFileSet {
-		fmt.Printf("file %s will be re-Replicate!!\n", fileName)
-	}
-
-	//Reassign replicas for this file
-	for sdfsFileName := range repFileSet {
-		for _, nodeID := range namenode.Filemap[sdfsFileName] {
-			//***ToDo: Pick any correct node as LocalID
-			if _, ok := namenode.Nodemap[nodeID]; ok {
-				fmt.Printf("updateMap: Reassign nodeID: %s for sdfsfile: %s!!!\n", nodeID, sdfsFileName)
-				log.Printf("updateMap: Reassign nodeID: %s for sdfsfile: %s!!!\n", nodeID, sdfsFileName)
-				//New Replicas set for one sdfsFile
-				namenode.Filemap[sdfsFileName] = Config.GetReplica(nodeID, namenode.MembershipList)
-
-				//Namenode Caches all re-replicated files
-				GetFile([]string{sdfsFileName, sdfsFileName}, false)
-
-				//Add entry for new-add node list
-				for _, val := range namenode.Filemap[sdfsFileName] {
-					for _, addNodeID := range addList {
-						if val == addNodeID {
-							fmt.Printf("updateMap: Add entry for nodeID: %s for sdfsfile: %s!!!\n", addNodeID, sdfsFileName)
-							log.Printf("updateMap: Add entry for nodeID: %s for sdfsfile: %s!!!\n", addNodeID, sdfsFileName)
-							namenode.Nodemap[addNodeID] = append(namenode.Nodemap[addNodeID], sdfsFileName)
-						}
+			//Also update Filemap and re-replicate files
+			for _, filename := range reReplicaFileList {
+				for idx, nodeID := range Filemap[filename].DatanodeList{
+					if nodeID == failedNodeID {
+						Filemap[filename].DatanodeList = append(Filemap[filename].DatanodeList[:idx], Filemap[filename].DatanodeList[idx+1:]...)
+						break
 					}
 				}
-				break
+				//TODO re-replicate the file
+				fmt.Println("Start re-replicating...")
 			}
 		}
 	}
-
-	return repFileSet
-}
-
-//Todo: Rereplicate files for deleting Node
-func reReplicate(repFileSet map[string]bool) {
-	//Only re-replicate for each file once
-	for sdfsFileName := range repFileSet {
-		//***Replicate from sdfsfile?
-		fmt.Printf("===Re-replicate file: %s!!!\n", sdfsFileName)
-		//****Todo: Not namenode call!!!
-		PutFile([]string{sdfsFileName, sdfsFileName}, false)
-	}
-	fmt.Printf("===Re-replicate returned!!\n")
-	log.Printf("===Re-replicate returned!!\n")
-
 }
 
 ///////////////////////////////////RPC Methods////////////////////////////
@@ -192,9 +101,8 @@ func reReplicate(repFileSet map[string]bool) {
 */
 
 func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
-	fmt.Printf("***namenode*** Enter GetDatanodeList! Filemap length is: %d!\n", len(n.Filemap))
-	if _, ok := n.Filemap[req.Filename]; ok {
-		resp.DatanodeList = n.Filemap[req.Filename]
+	if filemetadata, ok := n.Filemap[req.Filename]; ok {
+		resp.DatanodeList = filemetadata.DatanodeList
 	} else {
 		resp.DatanodeList = []string{}
 	}
@@ -208,42 +116,41 @@ func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
 */
 func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 
-	datanodeList := Config.GetReplica(req.Hostname, namenode.MembershipList)
-	fmt.Println("GetReplica succeed! datanodeList'size is: %d!!\n", len(datanodeList))
-	log.Println("GetReplica succeed! datanodeList'size is: %d!!\n", len(datanodeList))
+	datanodeList := append(Mem.GetListByRelateIndex(req.NodeID, []int{1,2,3}), req.NodeID)
+	fmt.Println("datanodeList", datanodeList)
 
+	//Updata Nodemap
 	for _, datanodeID := range datanodeList {
-		fmt.Printf("**namenode**: Insert sdfsfile: %s to %s from %s\n", req.Filename, datanodeID, req.Hostname)
-		log.Printf("**namenode**: Insert sdfsfile: %s to %s from %s\n", req.Filename, datanodeID, req.Hostname)
-		n.Filemap[req.Filename] = append(n.Filemap[req.Filename], datanodeID)
 		n.Nodemap[datanodeID] = append(n.Nodemap[datanodeID], req.Filename)
-		n.Filetime[req.Filename] = time.Now()
 	}
-	// n.Filemap[InsertRequest.Filename] = datanodeList
 
+	//Update Filemap
+	filemetadata := FileMetadata{datanodeList, time.Now()}
+	n.Filemap[req.Filename] = &filemetadata
+
+	//Return
 	resp.DatanodeList = datanodeList
 	return nil
 }
 
-func (n *Namenode) DeleteFile(req DeleteRequest, resp *DeleteResponse) error {
+func (n *Namenode) DeleteFileMetadata(filename string, resp *bool) error {
+	if filemetadata, ok := n.Filemap[filename]; ok {
+		//Delete from Filemap
+		delete(n.Filemap, filename)
 
-	var findFlag bool = false
-	delete(n.Filemap, req.Filename)
-	for nodeID, nodeFile := range n.Nodemap {
-		for idx, fileName := range nodeFile {
-			if req.Filename == fileName {
-				log.Printf("Delete Entry for File %s in %s!!\n", fileName, nodeID)
-				nodeFile = append(nodeFile[:idx], nodeFile[idx+1:]...)
-				log.Printf("NodeMap for nodeID %s is: %d!!\n", nodeID, len(nodeFile))
-				findFlag = true
-				break
+		//Delete from Nodemap
+		for _, datanodeID := range filemetadata.DatanodeList{
+			for idx, storedfilename := range n.Nodemap[datanodeID]{
+				if storedfilename == filename {
+					n.Nodemap[datanodeID] = append(n.Nodemap[datanodeID][:idx], n.Nodemap[datanodeID][idx+1:]...)
+					break
+				}
 			}
 		}
-		n.Nodemap[nodeID] = nodeFile
+	} else {
+		*resp = false
 	}
-	if !findFlag {
-		resp.Statement = "No such File???"
-	}
+
 	return nil
 }
 
@@ -254,20 +161,80 @@ func (n *Namenode) DeleteFile(req DeleteRequest, resp *DeleteResponse) error {
 func (n *Namenode) GetWritePermission(req PermissionRequest, res *bool) error {
 	if req.MustWrite {
 		*res = true
-		n.Filetime[req.Filename] = time.Now()
+		n.Filemap[req.Filename].LastWrtTime = time.Now()
 	} else {
 		//Check if (curTime - lastWrtTime) > 60 s
 		curTime := time.Now()
-		lastWrtTime := n.Filetime[req.Filename]
+		lastWrtTime := n.Filemap[req.Filename].LastWrtTime
 		timeDiff := curTime.Sub(lastWrtTime)
 
 		if int64(timeDiff)-int64(60*time.Second) > 0 {
 			*res = true
-			n.Filetime[req.Filename] = curTime
+			n.Filemap[req.Filename].LastWrtTime = curTime
 		} else {
 			*res = false
 		}
 	}
 
 	return nil
+}
+
+///////////////////////////////////Helper functions////////////////////////////
+
+func insert(filemap map[string]*FileMetadata, sdfsfilename string, datanodeID string){
+	if filemetadata, ok := filemap[sdfsfilename]; ok {
+		//filemap[sdfsfilename] exist		
+		filemetadata.DatanodeList = append(filemetadata.DatanodeList, datanodeID)
+		sort.Strings(filemetadata.DatanodeList)
+	} else {
+		//filemap[sdfsfilename] not exist
+		newfilemetadata := FileMetadata{[]string{datanodeID},time.Now()} //TODO Should LastWrtTime = time.Now()?
+		filemap[sdfsfilename] = &newfilemetadata
+	}
+}
+
+func checkReplica(sdfsfilename string, datanodelist []string) bool{
+	n := len(datanodelist)
+
+	if n > 3 {
+		//At least 4 datanodes store the sdfsfile
+		return true
+	} else {
+		//Not enough replicas
+		//TODO re-replicate
+		fmt.Println("Start re-replicating...")
+		return false
+	}
+	
+}
+
+
+//TODO check this function
+func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]string) {
+	//RPC datenodes to get FileList
+	for _, nodeID := range Mem.MembershipList {
+		nodeAddr := Config.GetIPAddressFromID(nodeID)
+
+		client := NewClient(nodeAddr + ":" + Config.DatanodePort)
+		client.Dial()
+		
+		var filelist []string
+		client.rpcClient.Call("Datanode.GetFileList","", &filelist)
+		
+		nodemap[nodeID] = filelist
+
+		client.Close()
+	}
+
+	//Figure out Filemap from Nodemap
+	for datanodeID, fileList := range nodemap {
+		for _, sdfsfilename := range fileList {
+			insert(filemap, sdfsfilename, datanodeID)
+		}
+	}
+
+	//Check if each sdfsfile has sufficient replicas
+	for sdfsfilename, filemetadata := range filemap {
+		checkReplica(sdfsfilename, filemetadata.DatanodeList)
+	}
 }
