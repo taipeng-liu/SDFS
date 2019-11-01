@@ -55,6 +55,7 @@ func UpdateMemshipList(recvMsg MP.Message) bool {
 		updateMemHBMap()
 		updateMonitorList()
 		//If a node is deleted, inform datanode to update its namenodeID
+		fmt.Println("failedNodeID ",failedNodeID)
 		if failedNodeID != "" {
 			go SendFailedNodeID(failedNodeID)
 		}
