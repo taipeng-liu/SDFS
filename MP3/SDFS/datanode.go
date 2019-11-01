@@ -48,13 +48,14 @@ func RunDatanodeServer() {
 		log.Fatal("Listen error", err)
 	}
 
+	go WaitingForFailedNodeID()    //helper function at client.go
+
 	fmt.Printf("===RunDatanodeServer: Listen on port %s\n", Config.DatanodePort)
 	err = http.Serve(listener, mux)
 	if err != nil {
 		log.Fatal("Serve(listener, nil) error: ", err)
 	}
-	
-	WaitingForFailedNodeID()    //helper function at client.go
+
 }
 
 //////////////////////////////////////Methods///////////////////////////////////

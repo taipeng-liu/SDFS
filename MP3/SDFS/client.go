@@ -461,8 +461,7 @@ func GetNamenodeAddr() string {
 
 //Whenever client receive a filaedNodeID from updater, it calls datanode
 func WaitingForFailedNodeID() {
-	for {
-		fmt.Println("Waiting for failed NodeID................................")
+	for true {
 		failedNodeID := <- Mem.FailedNodeID
 		fmt.Println("Sdfs: Receive failedNodeID from Mem.Updater: ", failedNodeID)
 
