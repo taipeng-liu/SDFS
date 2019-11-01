@@ -54,7 +54,7 @@ func RunDatanodeServer() {
 		log.Fatal("Serve(listener, nil) error: ", err)
 	}
 	
-	go WaitingForFailedNodeID()    //helper function at client.go
+	WaitingForFailedNodeID()    //helper function at client.go
 }
 
 //////////////////////////////////////Methods///////////////////////////////////
