@@ -138,7 +138,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 		os.RemoveAll(Config.TempfileDir)
 
 		//Append if not exist
-		if d.FileList == []string{} {
+		if len(d.FileList) == 0 {
 			//Empty list
 			d.FileList = append(d.FileList, req.Filename)
 		} else {
