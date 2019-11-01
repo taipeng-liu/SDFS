@@ -57,7 +57,7 @@ func UpdataDatanode(newMemList []string) {
 	datanode.MembershipList = newMemList
 }
 
-//***TODO: Start a new election and return new namnode's address
+//When former master fails/leaves, update master/ start new election
 func UpdateMaster() {
 	//Todo: Prune this algorithm?
 	//For now, Always set the first in MembershipList as Master
@@ -105,7 +105,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 		Config.CreateDirIfNotExist(Config.SdfsfileDir)
 		sdfsfilePath := Config.SdfsfileDir + "/" + req.Filename
 		os.Rename(tempfilePath, sdfsfilePath)
-		os.RemoveAll(Config.TempfileDir)
+		os.RemoveAll(tempfilePath)
 
 		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
 		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)

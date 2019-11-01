@@ -77,6 +77,9 @@ func main() {
 		case "clear":
 			log.Println("Main: clear directory sdfsFile")
 			go Sdfs.Clear() //"SDFS/client.go"
+		case "master":
+			log.Println("Main: Show current master ID")
+			go Sdfs.GetNamenodeAddr() //SDFS/client.go
 		case "y":
 			Sdfs.YESorNO <- true
 			Sdfs.KillTimeOut30s <- ""

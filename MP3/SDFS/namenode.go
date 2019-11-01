@@ -66,7 +66,7 @@ func RunNamenodeServer() {
 
 }
 
-//***Todo: Check if it's correct
+//***Call from Updater , pending: use channel to update
 func UpdateNameNode(newMemList []string) {
 	var addList, deleteList []string
 	mapEq := reflect.DeepEqual(newMemList, namenode.MembershipList)
@@ -109,18 +109,17 @@ func UpdateNameNode(newMemList []string) {
 	reReplicate(repFileSet)
 }
 
-//***Todo: Update two essential maps
+//***Update two essential maps
 func updateMap(addList []string, deleteList []string) map[string]bool {
 	//Set of sdfsfile to be re-replicated
 	repFileSet := make(map[string]bool)
-	// repFileSet := []string
 	fmt.Printf("addList'size is %d!!\n", len(addList))
 	fmt.Printf("deleteList'size is %d!!\n", len(deleteList))
 
 	for _, nodeID := range deleteList {
-		// fmt.Printf("Length of nodemap[%s] is: %d!!\n", nodeID, len(namenode.Nodemap[nodeID]))
+		// log.Printf("Length of nodemap[%s] is: %d!!\n", nodeID, len(namenode.Nodemap[nodeID]))
 		if len(namenode.Nodemap[nodeID]) == 0 {
-			// fmt.Printf("Nothing to be delete for node %s\n!!", nodeID)
+			log.Printf("Nothing to be delete for node %s\n!!", nodeID)
 			continue
 		}
 		for _, fileName := range namenode.Nodemap[nodeID] {
@@ -233,9 +232,9 @@ func (n *Namenode) DeleteFile(req DeleteRequest, resp *DeleteResponse) error {
 	for nodeID, nodeFile := range n.Nodemap {
 		for idx, fileName := range nodeFile {
 			if req.Filename == fileName {
-				fmt.Printf("Delete Entry for File %s in %s!!\n", fileName, nodeID)
+				log.Printf("Delete Entry for File %s in %s!!\n", fileName, nodeID)
 				nodeFile = append(nodeFile[:idx], nodeFile[idx+1:]...)
-				fmt.Printf("NodeMap for nodeID %s is: %d!!\n", nodeID, len(nodeFile))
+				log.Printf("NodeMap for nodeID %s is: %d!!\n", nodeID, len(nodeFile))
 				findFlag = true
 				break
 			}
@@ -243,7 +242,7 @@ func (n *Namenode) DeleteFile(req DeleteRequest, resp *DeleteResponse) error {
 		n.Nodemap[nodeID] = nodeFile
 	}
 	if !findFlag {
-		resp.Statement = "No such File??"
+		resp.Statement = "No such File???"
 	}
 	return nil
 }

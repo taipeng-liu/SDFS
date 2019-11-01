@@ -138,10 +138,10 @@ Should we use Membership List in Failure Detect Protocol or just Full-Process Li
 
 ### 10.30
 ```
-Fix one-minute put command gap check bug
-How to implement sophisticated election protocol?     
-How to handle duplicate Write/Put in one file? 
-Pending: Test system in nodes-failure scenario
+Fix one-minute put command gap check bug -- Test pass!
+How to implement sophisticated election protocol?  -- Pending
+How to handle duplicate Write/Put in one file?  -- Pending
+Pending: Test system in nodes-failure scenario  -- Pending
 ```
 
 ## Demo Instruction

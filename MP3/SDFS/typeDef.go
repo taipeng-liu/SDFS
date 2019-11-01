@@ -1,5 +1,11 @@
 package sdfs
 
+type Block struct {
+	Idx     int
+	Size    int64
+	Content []byte
+}
+
 type FindRequest struct {
 	Filename string
 }
