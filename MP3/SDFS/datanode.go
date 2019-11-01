@@ -63,14 +63,14 @@ func RunDatanodeServer() {
 func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 	//No namenode right now, start a selection process
 	if d.NamenodeID == "" {
-		fmt.Println("Figure out the new namenode")
 		//TODO New namenode election strategy
-		//In this way, the first master is always introducer
 		d.NamenodeID = Mem.MembershipList[0]
 
 		if d.NamenodeID == Mem.LocalID {
+			//This datanode is namenode
 			OpenNamenodeServer <- ""
 		} else {
+			//This datanode is not namenode, evoke namenode!
 			EvokeNamenode(d.NamenodeID)  //helper function at client.go
 		}
 	}
@@ -93,7 +93,6 @@ func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
 		}
 	}else {
 		//Namenode fails or no namenode, update namenodeID locally
-		//If this datanode is master, run namenode server
 		*resp = true
 		d.NamenodeID = Mem.MembershipList[0]
 
@@ -136,7 +135,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 		sdfsfilePath := Config.SdfsfileDir + "/" + req.Filename
 
 		os.Rename(tempfilePath, sdfsfilePath)
-		os.RemoveAll(tempfilePath)
+		os.RemoveAll(Config.TempfileDir)
 		d.FileList = append(d.FileList, req.Filename)
 
 		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
