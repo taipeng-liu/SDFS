@@ -200,7 +200,7 @@ func (c *Client) Delete(sdfsfilename string) error {
 func (c *Client) DeleteFileMetadata(sdfsfilename string) error {
 	var res bool
 
-	if err := c.rpcClient.Call("Namenode.DeleteFileMetaData", sdfsfilename, &res); err != nil {
+	if err := c.rpcClient.Call("Namenode.DeleteFileMetadata", sdfsfilename, &res); err != nil {
 		return err
 	}
 	if !res {
@@ -507,7 +507,7 @@ func RpcOperationAt(operation string, localfilename string, sdfsfilename string,
 
 	//****TODO This line is a critical section, use mutex/channel
 	(*respCount)++
-	fmt.Println("respCount", *respCount)
+	//fmt.Println("respCount", *respCount)
 
 	client.Close()
 }
