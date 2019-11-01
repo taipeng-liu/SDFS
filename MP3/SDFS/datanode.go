@@ -70,7 +70,8 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 
 		if d.NamenodeID == Mem.LocalID {
 			OpenNamenodeServer <- ""
-			//If IsMaster(), run namenode server
+		} else {
+			EvokeNamenode(d.NamenodeID)  //helper function at client.go
 		}
 	}
 
@@ -83,17 +84,15 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 //This RPC method will be called from client.go when a node fail/leave
 func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
 	if d.NamenodeID != "" && failedNodeID != d.NamenodeID {
-		fmt.Println("No namenodeID update")
 		//Namenode is still alive, don't update namenodeID
 		*resp = false
 
-		//If this datanode is master, update Filemap
+		//If this datanode is namenode, update Filemap
 		if d.NamenodeID == Mem.LocalID {
 			UpdateFilemapChan <- failedNodeID
 		}
 	}else {
-		fmt.Println("NamenodeID update!")
-		//Namenode fails, update namenodeID locally
+		//Namenode fails or no namenode, update namenodeID locally
 		//If this datanode is master, run namenode server
 		*resp = true
 		d.NamenodeID = Mem.MembershipList[0]
@@ -106,7 +105,8 @@ func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
 	return nil
 }
 
-func (d *Datanode) GetFileList(req string, res *[]string) error{
+func (d *Datanode) GetFileList(namenodeID string, res *[]string) error{
+	d.NamenodeID = namenodeID
 	*res = d.FileList
 	return nil
 }

@@ -476,6 +476,21 @@ func WaitingForFailedNodeID() {
 	}
 }
 
+func EvokeNamenode(namenodeID string){
+	namenodeAddr := Config.GetIPAddressFromID(namenodeID)
+
+	client := NewClient(namenodeAddr + ":" + Config.DatanodePort)
+	client.Dial()
+
+	var updateOK bool
+	client.rpcClient.Call("Datanode.UpdateNamenodeID", "", updateOK)
+	if !updateOK {
+		fmt.Println("UpdateNamenodeID error")
+	}
+
+	client.Close()
+}
+
 func listFile(dirPath string) {
 	Config.CreateDirIfNotExist(dirPath)
 	fmt.Printf("===%s contains following files:\n", dirPath)

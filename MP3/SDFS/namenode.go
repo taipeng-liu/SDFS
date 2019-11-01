@@ -30,9 +30,7 @@ type Namenode struct {
 
 func RunNamenodeServer() {
 
-	if !Config.IsIntroducer(){ //TODO better strategy
-		<- OpenNamenodeServer
-	}
+	<- OpenNamenodeServer
 
 	var namenode = new(Namenode)
 
@@ -63,14 +61,16 @@ func RunNamenodeServer() {
 		log.Fatal("Listen error", err)
 	}
 
+	getCurrentMaps(namenode.Filemap, namenode.Nodemap)
+	
+	go WaitUpdateFilemapChan(namenode.Filemap, namenode.Nodemap)
+
+
 	fmt.Printf("===RunNamenodeServer: Listen on port %s\n", Config.NamenodePort)
 	err = http.Serve(listener, mux)
 	if err != nil {
 		log.Fatal("Serve(listener, nil) error: ", err)
 	}
-
-	getCurrentMaps(namenode.Filemap, namenode.Nodemap)
-	go WaitUpdateFilemapChan(namenode.Filemap, namenode.Nodemap)
 }
 
 func WaitUpdateFilemapChan(Filemap map[string]*FileMetadata, Nodemap map[string][]string) {
@@ -222,7 +222,7 @@ func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]strin
 		client.Dial()
 		
 		var filelist []string
-		client.rpcClient.Call("Datanode.GetFileList","", &filelist)
+		client.rpcClient.Call("Datanode.GetFileList",Mem.LocalID, &filelist)
 		
 		nodemap[nodeID] = filelist
 
