@@ -138,16 +138,20 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 		os.RemoveAll(Config.TempfileDir)
 
 		//Append if not exist
-		for i, storedFilename := range d.FileList {
-			if storedFilename == req.Filename {
-				break
-			}
-			if i == len(d.FileList) - 1 {
-				d.FileList = append(d.FileList, req.Filename)
+		if d.FileList == []string{} {
+			//Empty list
+			d.FileList = append(d.FileList, req.Filename)
+		} else {
+			for i, storedFilename := range d.FileList {
+				if storedFilename == req.Filename {
+					break
+				}
+				if i == len(d.FileList) - 1 {
+					d.FileList = append(d.FileList, req.Filename)
+				}
 			}
 		}
 
-		fmt.Println("Filelist is ", d.FileList)
 
 		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
 		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
