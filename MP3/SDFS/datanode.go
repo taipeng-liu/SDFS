@@ -147,6 +147,8 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 			}
 		}
 
+		fmt.Println("Filelist is ", d.FileList)
+
 		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
 		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
 	}
