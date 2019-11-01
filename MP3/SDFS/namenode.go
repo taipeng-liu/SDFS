@@ -191,7 +191,7 @@ func insert(filemap map[string]*FileMetadata, sdfsfilename string, datanodeID st
 		sort.Strings(filemetadata.DatanodeList)
 	} else {
 		//filemap[sdfsfilename] not exist
-		newfilemetadata := FileMetadata{[]string{datanodeID},time.Now()} //TODO Should LastWrtTime = time.Now()?
+		newfilemetadata := FileMetadata{[]string{datanodeID},time.Now()} //TODO Set LastWrtTime = time.Now() may cause some strange performance.
 		filemap[sdfsfilename] = &newfilemetadata
 	}
 }
@@ -212,7 +212,6 @@ func checkReplica(sdfsfilename string, datanodelist []string) bool{
 }
 
 
-//TODO check this function
 func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]string) {
 	//RPC datenodes to get FileList
 	for _, nodeID := range Mem.MembershipList {

@@ -226,12 +226,13 @@ func PutFile(filenames []string, fromLocal bool) {
 	var localfilePath string
 
 	if fromLocal {
-		//Check if localfile exists
+
 		localfilePath = Config.LocalfileDir + "/" + localfilename
 	} else {
 		localfilePath = Config.SdfsfileDir + "/" + localfilename
 	}
 
+	//Check if localfile exists
 	if _, err := os.Stat(localfilePath); os.IsNotExist(err) {
 		fmt.Printf("===Error: %s does not exsit in local!\n", localfilePath)
 		log.Printf("===Error: %s does not exsit in local!\n", localfilePath)
@@ -304,7 +305,9 @@ func GetFile(filenames []string, toLocal bool) {
 
 	if n == 0 {
 		//No datanode store sdfsfile, return
-		log.Printf("Get error: no such sdfsfile %s\n", sdfsfilename)
+		fmt.Printf("Get error: no sdfsfile %s\n", sdfsfilename)
+		log.Printf("Get error: no sdfsfile %s\n", sdfsfilename)
+		return
 	}
 
 	//Download sdfsfile from datanode
