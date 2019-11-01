@@ -385,6 +385,7 @@ func DeleteFile(filenames []string) {
 func ShowDatanode(filenames []string) {
 	if len(filenames) < 1 {
 		fmt.Println("Format: ls [sdfsfilename]")
+		return
 	}
 
 	//Rpc Namenode which send back datanodeList

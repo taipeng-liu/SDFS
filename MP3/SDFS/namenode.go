@@ -149,6 +149,7 @@ func (n *Namenode) DeleteFileMetadata(filename string, resp *bool) error {
 				}
 			}
 		}
+		*resp = true
 	} else {
 		*resp = false
 	}
