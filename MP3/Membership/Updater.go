@@ -63,9 +63,7 @@ func UpdateMemshipList(recvMsg MP.Message) bool {
 }
 
 func SendFailedNodeID(failedNodeID string){
-	fmt.Println("send FailedNodeID")
 	FailedNodeID <- failedNodeID
-	fmt.Println("sent!!")
 }
 
 func WriteMemtableToJsonFile(fileAddr string) error {

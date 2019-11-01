@@ -82,7 +82,7 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 
 //This RPC method will be called from client.go when a node fail/leave
 func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
-	if failedNodeID != d.NamenodeID {
+	if d.NamenodeID != "" && failedNodeID != d.NamenodeID {
 		//Namenode is still alive, don't update namenodeID
 		*resp = false
 
