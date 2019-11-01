@@ -224,6 +224,7 @@ func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]strin
 		client.rpcClient.Call("Datanode.GetFileList",Mem.LocalID, &filelist)
 		
 		nodemap[nodeID] = filelist
+		fmt.Println("filelist is ", filelist)
 
 		client.Close()
 	}
