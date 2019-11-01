@@ -462,6 +462,7 @@ func GetNamenodeAddr() string {
 func WaitingForFailedNodeID() {
 	for {
 		failedNodeID := <- Mem.FailedNodeID
+		fmt.Println("Sdfs: Receive failedNodeID from Mem.Updater: ", failedNodeID)
 
 		var updateOK bool
 

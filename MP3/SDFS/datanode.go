@@ -22,6 +22,7 @@ type Datanode struct {
 
 func RunDatanodeServer() {
 	var datanode = new(Datanode)
+	datanode.FileList = []string{}
 
 	datanodeServer := rpc.NewServer()
 

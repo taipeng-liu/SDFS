@@ -59,7 +59,6 @@ func UpdateMemshipList(recvMsg MP.Message) bool {
 			go SendFailedNodeID(failedNodeID)
 		}
 	}
-	fmt.Println("Updater return")
 	return updateOk
 }
 
