@@ -507,6 +507,7 @@ func RpcOperationAt(operation string, localfilename string, sdfsfilename string,
 
 	//****TODO This line is a critical section, use mutex/channel
 	(*respCount)++
+	fmt.Println("respCount", *respCount)
 
 	client.Close()
 }

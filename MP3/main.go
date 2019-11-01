@@ -48,7 +48,7 @@ func main() {
 			log.Println("Main: Join the group")
 			go Mem.RunNode(isIntroducer)
 			go Sdfs.RunDatanodeServer() //"SDFS/DatanodeServer.go"
-			go Sdfs.RunNamenodeServer()
+			go Sdfs.RunNamenodeServer() //"SDFS/NamenodeServer.go"
 			//TODO Decide when and where run Namenode Server???
 		case "leave":
 			log.Println("Main: Leave the group")

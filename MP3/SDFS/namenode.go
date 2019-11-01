@@ -30,7 +30,9 @@ type Namenode struct {
 
 func RunNamenodeServer() {
 
-	<- OpenNamenodeServer
+	if !Config.IsIntroducer(){ //TODO better strategy
+		<- OpenNamenodeServer
+	}
 
 	var namenode = new(Namenode)
 

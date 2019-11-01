@@ -64,11 +64,12 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 	if d.NamenodeID == "" {
 		fmt.Println("Figure out the new namenode")
 		//TODO New namenode election strategy
+		//In this way, the first master is always introducer
 		d.NamenodeID = Mem.MembershipList[0]
 
-		//If IsMaster(), run namenode server
 		if d.NamenodeID == Mem.LocalID {
 			OpenNamenodeServer <- ""
+			//If IsMaster(), run namenode server
 		}
 	}
 
