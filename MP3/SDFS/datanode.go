@@ -83,6 +83,7 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 //This RPC method will be called from client.go when a node fail/leave
 func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
 	if d.NamenodeID != "" && failedNodeID != d.NamenodeID {
+		fmt.Println("No namenodeID update")
 		//Namenode is still alive, don't update namenodeID
 		*resp = false
 
@@ -91,6 +92,7 @@ func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
 			UpdateFilemapChan <- failedNodeID
 		}
 	}else {
+		fmt.Println("NamenodeID update!")
 		//Namenode fails, update namenodeID locally
 		//If this datanode is master, run namenode server
 		*resp = true
