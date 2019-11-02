@@ -15,6 +15,7 @@ const (
 	TempfileDir  = "SDFS/tempFile"
 	DatanodePort = "8885"
 	NamenodePort = "8884"
+	ReplicaNum   = 4
 	BLOCK_SIZE   = 512 * 1024
 )
 
