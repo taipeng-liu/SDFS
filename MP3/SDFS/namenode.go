@@ -211,6 +211,8 @@ func checkReplica(sdfsfilename string, meta *FileMetadata) {
 	} else 	{
 		//Not enough replicas
 		fmt.Println("Start re-replicating...")
+		defer Config.TimeCount()()		
+
 		neededReReplicaNum := Config.ReplicaNum - n
 
 		sort.Strings(meta.DatanodeList)

@@ -220,7 +220,7 @@ func (d *Datanode) PutSdfsfileToList(req ReReplicaRequest, res *bool) error {
 	for _, nodeID := range req.DatanodeList {
 		nodeAddr := Config.GetIPAddressFromID(nodeID)
 
-		go RpcOperationAt("put", req.Filename, req.Filename, nodeAddr, Config.DatanodePort, false, &resp)
+		go RpcOperationAt("put", req.Filename, req.Filename, nodeAddr, Config.DatanodePort, false, &resp, len(req.DatanodeList))
 	}
 
 	for resp < len(req.DatanodeList) {

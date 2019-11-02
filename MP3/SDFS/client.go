@@ -8,6 +8,7 @@ import (
 	"net/rpc"
 	"os"
 	"time"
+	"sync"
 
 	Config "../Config"
 	Mem "../Membership"
@@ -20,6 +21,10 @@ const (
 
 var KillTimeOut30s chan string = make(chan string)
 var YESorNO chan bool = make(chan bool)
+var PutFinishChan chan string = make(chan string)
+var GetFinishChan chan string = make(chan string)
+var DeleteFinishChan chan string = make(chan string)
+var mutex sync.Mutex
 
 type Client struct {
 	Addr      string
@@ -216,6 +221,7 @@ func (c *Client) DeleteFileMetadata(sdfsfilename string) error {
 //put command: put [localfilename] [sdfsfilename]
 func PutFile(filenames []string) {
 
+	
 	if len(filenames) < 2 {
 		fmt.Println("Usage: put [localfilename] [sdfsfilename]")
 		return
@@ -259,16 +265,19 @@ func PutFile(filenames []string) {
 
 	//Shared Variable: Write Quorum for uploading localfile to datanodes
 	var respCount int = 0
+	defer Config.TimeCount()()
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
-		go RpcOperationAt("put", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, true, &respCount)
+		go RpcOperationAt("put", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, true, &respCount, n)
 	}
 
-	for respCount < W && respCount < n {
-		//TODO: Set up timeout in case of no response causing forever waiting
-		time.Sleep(time.Second)
-	}
+	<-PutFinishChan
+
+	//for respCount < W && respCount < n {
+	//	//TODO: Set up timeout in case of no response causing forever waiting
+	//	time.Sleep(time.Second)
+	//}
 
 	client.Close()
 
@@ -304,17 +313,20 @@ func GetFile(filenames []string) {
 
 	//Download sdfsfile from datanode
 	var respCount int = 0
+	defer Config.TimeCount()()
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
 		//Todo:
-		go RpcOperationAt("get", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, true, &respCount)
+		go RpcOperationAt("get", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, true, &respCount, n)
 	}
 
-	for respCount < R && respCount < n {
+	<-GetFinishChan
+
+	//for respCount < R && respCount < n {
 		//*****TODO timeout
-		time.Sleep(time.Second)
-	}
+	//	time.Sleep(time.Second)
+	//}
 
 	client.Close()
 
@@ -353,16 +365,19 @@ func DeleteFile(filenames []string) {
 
 	//Delete sdfsfile in each datanode
 	var respCount int = 0
+	defer Config.TimeCount()()
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
-		go RpcOperationAt("delete", "", sdfsfilename, datanodeAddr, Config.DatanodePort, true, &respCount)
+		go RpcOperationAt("delete", "", sdfsfilename, datanodeAddr, Config.DatanodePort, true, &respCount, n)
 	}
 
-	for respCount < n {
+	<-DeleteFinishChan
+
+	//for respCount < n {
 		//TODO timeout
-		time.Sleep(time.Second)
-	}
+	//	time.Sleep(time.Second)
+	//}
 
 	if err := client.DeleteFileMetadata(sdfsfilename); err != nil {
 		log.Println("DeleteFileMetedata() error")
@@ -511,24 +526,52 @@ func informDatanodeToPutSdfsfile(datanodeID string, sdfsfilename string, otherNo
 	client.Close()
 }
 
-func RpcOperationAt(operation string, localfilename string, sdfsfilename string, addr string, port string, isLocal bool, respCount *int) {
+func RpcOperationAt(operation string, localfilename string, sdfsfilename string, addr string, port string, isLocal bool, respCount *int, N int) {
 	client := NewClient(addr + ":" + port)
 	client.Dial()
 
 	switch operation {
 	case "put":
 		client.Put(localfilename, sdfsfilename, isLocal)
+
+		mutex.Lock()
+		(*respCount)++
+		mutex.Unlock()
+
+		if *respCount == min(W,N) {
+			PutFinishChan <- ""
+		}
 	case "get":
 		client.Get(sdfsfilename, localfilename, addr)
+
+		mutex.Lock()
+		(*respCount)++
+		mutex.Unlock()
+
+		if *respCount == min(R,N) {
+			GetFinishChan <- ""
+		}
 	case "delete":
 		client.Delete(sdfsfilename)
+
+		mutex.Lock()
+		(*respCount)++
+		mutex.Unlock()
+
+		if *respCount == N {
+			DeleteFinishChan <- ""
+		}
 	default:
 		log.Println("RpcOperationAt(): Don't support this operation")
 	}
 
-	//****TODO This line is a critical section, use mutex/channel
-	(*respCount)++
-	//fmt.Println("respCount", *respCount)
-
 	client.Close()
+}
+
+func min(a int, b int) int{
+	if a < b {
+		return a
+	} else {
+		return b
+	}
 }

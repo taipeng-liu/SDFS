@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 )
 
 const (
@@ -84,3 +85,11 @@ func IsIntroducer() bool {
 	return hostName == IntroducerAddress
 }
 
+func TimeCount() func() {
+	start := time.Now()
+
+	return func() {
+		cost := time.Since(start)
+		fmt.Printf("Time cost: %v\n" ,cost)
+	}
+}
