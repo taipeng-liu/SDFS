@@ -22,6 +22,11 @@ type PermissionRequest struct {
 	MustWrite bool
 }
 
+type ReReplicaRequest struct {
+	Filename     string
+	DatanodeList []string
+}
+
 type PutRequest struct {
 	Filename string
 	Eof      bool

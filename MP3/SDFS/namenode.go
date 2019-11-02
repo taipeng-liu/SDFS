@@ -90,8 +90,7 @@ func WaitUpdateFilemapChan(Filemap map[string]*FileMetadata, Nodemap map[string]
 						break
 					}
 				}
-				//TODO re-replicate the file
-				fmt.Println("Start re-replicating...")
+				checkReplica(filename, Filemap[filename].DatanodeList)
 			}
 		}
 	}
@@ -118,7 +117,12 @@ func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
 */
 func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 
-	datanodeList := append(Mem.GetListByRelateIndex(req.NodeID, []int{1,2,3}), req.NodeID)
+	relateIndex := make([]int, Config.ReplicaNum - 1)
+	for i := 0 ; i < Config.ReplicaNum - 1; i++ {
+		relateIndex[i] = i + 1
+	}
+
+	datanodeList := append(Mem.GetListByRelateIndex(req.NodeID, relateIndex), req.NodeID)
 	fmt.Println("datanodeList", datanodeList)
 
 	//Updata Nodemap
@@ -196,21 +200,71 @@ func insert(filemap map[string]*FileMetadata, sdfsfilename string, datanodeID st
 	}
 }
 
-func checkReplica(sdfsfilename string, datanodelist []string) bool{
+func checkReplica(sdfsfilename string, datanodelist []string) {
 	n := len(datanodelist)
 
-	if n > 3 {
-		//At least 4 datanodes store the sdfsfile
-		return true
-	} else {
+	if n > Config.ReplicaNum - 1 {
+		//At least n = "ReplicaNum" datanodes store the sdfsfile
+		return
+	} else if n < 1{
+		//Debug use. Normally, this line will never be printed.
+		fmt.Println("Wrong! File isn't stored in any datanodes.")
+	} else 	{
 		//Not enough replicas
-		//TODO re-replicate
 		fmt.Println("Start re-replicating...")
-		return false
-	}
-	
+		neededReReplicaNum := Config.ReplicaNum - n
+
+		sort.Strings(datanodelist)
+
+		reReplicaNodeList, len := findDifferenceOfTwoLists(Mem.MembershipList, datanodelist, neededReReplicaNum)
+		
+		fmt.Println("reReplicaNodeList ", reReplicaNodeList)
+		if len == 0 {
+			//MembershipList == datanodelist, e.g. only 1 node in group
+			return
+		}
+
+		//RPC datanodelist[0] to "PutSdfsfileToList"
+		informDatanodeToPutSdfsfile(datanodelist[0], sdfsfilename, reReplicaNodeList)  //Helper function at client.go
+		
+		datanodelist = append(datanodelist, reReplicaNodeList...)
+		
+		fmt.Println("Re-replication complete!")
+	}	
 }
 
+//TODO: test this function
+//This function first find the first same element in both sorted lists, 
+//and then returns N different numbers in bigList from that element.
+//Note: smallList is a subset of bigList
+func findDifferenceOfTwoLists(bigList []string, smallList []string, N int) ([]string, int) {
+	var startIdx int
+	var res []string
+	bigListLen := len(bigList)
+
+	for ; startIdx < bigListLen; startIdx++ {
+		if bigList[startIdx] == smallList[0] {
+			break
+		}
+	}
+	
+	smallListIdx := 1
+
+	for i := (startIdx + 1)%bigListLen; i != startIdx ; i = (i+1)%bigListLen {
+		if N > 0 {
+			if smallListIdx < len(smallList) && bigList[i] == smallList[smallListIdx]{
+				smallListIdx++
+				continue
+			}
+			res = append(res, bigList[i])
+			N--
+		} else {
+			break
+		}
+	}
+
+	return res, len(res)
+}
 
 func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]string) {
 	//RPC datenodes to get FileList

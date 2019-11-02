@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
+	"time"
 
 	Config "../Config"
 	Mem "../Membership"
@@ -208,5 +209,22 @@ func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error {
 		}
 	}
 
+	return nil
+}
+
+func (d *Datanode) PutSdfsfileToList(req ReReplicaRequest, res *bool) error {
+	var resp int
+
+	for _, nodeID := range req.DatanodeList {
+		nodeAddr := Config.GetIPAddressFromID(nodeID)
+
+		go RpcOperationAt("put", req.Filename, req.Filename, nodeAddr, Config.DatanodePort, false, &resp)
+	}
+
+	for resp < len(req.DatanodeList) {
+		//TODO timeout
+		time.Sleep(time.Second)
+	}
+	
 	return nil
 }

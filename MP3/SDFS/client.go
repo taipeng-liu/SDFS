@@ -85,9 +85,15 @@ func (c *Client) GetWritePermission(sdfsfilename string) bool {
 	return permitted
 }
 
-func (c *Client) Put(localfilename string, sdfsfilename string) error {
+func (c *Client) Put(localfilename string, sdfsfilename string, isLocal bool) error {
 
-	localfilepath := Config.LocalfileDir + "/" + localfilename
+	var localfilepath string
+
+	if isLocal { 
+		localfilepath = Config.LocalfileDir + "/" + localfilename
+	} else {
+		localfilepath = Config.SdfsfileDir + "/" + localfilename
+	}
 
 	//Get fileInfo
 	fileInfo, err := os.Stat(localfilepath)
@@ -140,7 +146,7 @@ func (c *Client) Put(localfilename string, sdfsfilename string) error {
 	return nil
 }
 
-func (c *Client) Get(sdfsfilename string, localfilename string, toLocal bool, addr string) error {
+func (c *Client) Get(sdfsfilename string, localfilename string, addr string) error {
 	Config.CreateDirIfNotExist(Config.TempfileDir)
 
 	tempfilePath := Config.TempfileDir + "/" + localfilename + "." + addr
@@ -168,12 +174,7 @@ func (c *Client) Get(sdfsfilename string, localfilename string, toLocal bool, ad
 		}
 	}
 
-	var filePath string
-	if toLocal {
-		filePath = Config.LocalfileDir + "/" + localfilename
-	} else {
-		filePath = Config.SdfsfileDir + "/" + localfilename
-	}
+	filePath := Config.LocalfileDir + "/" + localfilename
 
 	fi, _ := tempfile.Stat()
 	filesize := int(fi.Size())
@@ -213,7 +214,7 @@ func (c *Client) DeleteFileMetadata(sdfsfilename string) error {
 /////////////////////Functions Called from main.go////////////////////////
 
 //put command: put [localfilename] [sdfsfilename]
-func PutFile(filenames []string, fromLocal bool) {
+func PutFile(filenames []string) {
 
 	if len(filenames) < 2 {
 		fmt.Println("Wrong Format!! It should be: put [localfilename] [sdfsfilename]")
@@ -225,12 +226,7 @@ func PutFile(filenames []string, fromLocal bool) {
 	sdfsfilename := filenames[1]
 	var localfilePath string
 
-	if fromLocal {
-
-		localfilePath = Config.LocalfileDir + "/" + localfilename
-	} else {
-		localfilePath = Config.SdfsfileDir + "/" + localfilename
-	}
+	localfilePath = Config.LocalfileDir + "/" + localfilename
 
 	//Check if localfile exists
 	if _, err := os.Stat(localfilePath); os.IsNotExist(err) {
@@ -270,7 +266,7 @@ func PutFile(filenames []string, fromLocal bool) {
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
-		go RpcOperationAt("put", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, fromLocal, &respCount)
+		go RpcOperationAt("put", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, true, &respCount)
 	}
 
 	for respCount < W && respCount < n {
@@ -287,7 +283,7 @@ func PutFile(filenames []string, fromLocal bool) {
 }
 
 //get command: get [sdfsfilename] [localfilename]
-func GetFile(filenames []string, toLocal bool) {
+func GetFile(filenames []string) {
 	if len(filenames) < 2 {
 		fmt.Println("Wrong Format!! It should be: get [sdfsfilename] [localfilename]")
 		return
@@ -316,7 +312,7 @@ func GetFile(filenames []string, toLocal bool) {
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
 		//Todo:
-		go RpcOperationAt("get", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, toLocal, &respCount)
+		go RpcOperationAt("get", localfilename, sdfsfilename, datanodeAddr, Config.DatanodePort, true, &respCount)
 	}
 
 	for respCount < R && respCount < n {
@@ -509,15 +505,27 @@ func listFile(dirPath string) {
 	}
 }
 
+func informDatanodeToPutSdfsfile(datanodeID string, sdfsfilename string, otherNodeList []string) {
+	datanodeAddr := Config.GetIPAddressFromID(datanodeID)
+
+	client := NewClient(datanodeAddr + ":" + Config.DatanodePort)
+	client.Dial()
+
+	var res string
+	client.rpcClient.Call("Datanode.PutSdfsfileToList", ReReplicaRequest{sdfsfilename,otherNodeList}, &res)
+
+	client.Close()
+}
+
 func RpcOperationAt(operation string, localfilename string, sdfsfilename string, addr string, port string, isLocal bool, respCount *int) {
 	client := NewClient(addr + ":" + port)
 	client.Dial()
 
 	switch operation {
 	case "put":
-		client.Put(localfilename, sdfsfilename) //TODO : isLocal???
+		client.Put(localfilename, sdfsfilename, isLocal)
 	case "get":
-		client.Get(sdfsfilename, localfilename, isLocal, addr)
+		client.Get(sdfsfilename, localfilename, addr)
 	case "delete":
 		client.Delete(sdfsfilename)
 	default:
