@@ -234,9 +234,8 @@ func checkReplica(sdfsfilename string, meta *FileMetadata) {
 	}	
 }
 
-//TODO: test this function
 //This function first find the first same element in both sorted lists, 
-//and then returns N different numbers in bigList from that element.
+//and then returns N different numbers in bigList starting from that element.
 //Note: smallList is a subset of bigList
 func findDifferenceOfTwoLists(bigList []string, smallList []string, N int) ([]string, int) {
 	var startIdx int

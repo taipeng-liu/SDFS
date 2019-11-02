@@ -274,11 +274,6 @@ func PutFile(filenames []string) {
 
 	<-PutFinishChan
 
-	//for respCount < W && respCount < n {
-	//	//TODO: Set up timeout in case of no response causing forever waiting
-	//	time.Sleep(time.Second)
-	//}
-
 	client.Close()
 
 	fmt.Println("PutFile successfully return")
@@ -323,14 +318,7 @@ func GetFile(filenames []string) {
 
 	<-GetFinishChan
 
-	//for respCount < R && respCount < n {
-		//*****TODO timeout
-	//	time.Sleep(time.Second)
-	//}
-
 	client.Close()
-
-	//*****TODO: multiple downloads???
 
 	//Clear all .tmp file
 	err := os.RemoveAll(Config.TempfileDir)
@@ -373,11 +361,6 @@ func DeleteFile(filenames []string) {
 	}
 
 	<-DeleteFinishChan
-
-	//for respCount < n {
-		//TODO timeout
-	//	time.Sleep(time.Second)
-	//}
 
 	if err := client.DeleteFileMetadata(sdfsfilename); err != nil {
 		log.Println("DeleteFileMetedata() error")

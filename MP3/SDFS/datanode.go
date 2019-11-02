@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/rpc"
 	"os"
-	"time"
 
 	Config "../Config"
 	Mem "../Membership"
@@ -223,10 +222,7 @@ func (d *Datanode) PutSdfsfileToList(req ReReplicaRequest, res *bool) error {
 		go RpcOperationAt("put", req.Filename, req.Filename, nodeAddr, Config.DatanodePort, false, &resp, len(req.DatanodeList))
 	}
 
-	for resp < len(req.DatanodeList) {
-		//TODO timeout
-		time.Sleep(time.Second)
-	}
+	<-PutFinishChan
 	
 	return nil
 }
