@@ -90,7 +90,7 @@ func WaitUpdateFilemapChan(Filemap map[string]*FileMetadata, Nodemap map[string]
 						break
 					}
 				}
-				checkReplica(filename, Filemap[filename].DatanodeList)
+				checkReplica(filename, Filemap[filename])
 			}
 		}
 	}
@@ -122,8 +122,7 @@ func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 		relateIndex[i] = i + 1
 	}
 
-	datanodeList := append(Mem.GetListByRelateIndex(req.NodeID, relateIndex), req.NodeID)
-	fmt.Println("datanodeList", datanodeList)
+	datanodeList := append([]string{req.NodeID}, Mem.GetListByRelateIndex(req.NodeID, relateIndex)...)
 
 	//Updata Nodemap
 	for _, datanodeID := range datanodeList {
@@ -200,8 +199,8 @@ func insert(filemap map[string]*FileMetadata, sdfsfilename string, datanodeID st
 	}
 }
 
-func checkReplica(sdfsfilename string, datanodelist []string) {
-	n := len(datanodelist)
+func checkReplica(sdfsfilename string, meta *FileMetadata) {
+	n := len(meta.DatanodeList)
 
 	if n > Config.ReplicaNum - 1 {
 		//At least n = "ReplicaNum" datanodes store the sdfsfile
@@ -214,21 +213,21 @@ func checkReplica(sdfsfilename string, datanodelist []string) {
 		fmt.Println("Start re-replicating...")
 		neededReReplicaNum := Config.ReplicaNum - n
 
-		sort.Strings(datanodelist)
+		sort.Strings(meta.DatanodeList)
 
-		reReplicaNodeList, len := findDifferenceOfTwoLists(Mem.MembershipList, datanodelist, neededReReplicaNum)
+		reReplicaNodeList, len := findDifferenceOfTwoLists(Mem.MembershipList, meta.DatanodeList, neededReReplicaNum)
 		
 		fmt.Println("reReplicaNodeList ", reReplicaNodeList)
 		if len == 0 {
-			//MembershipList == datanodelist, e.g. only 1 node in group
+			//MembershipList == meta.DatanodeList, e.g. only 1 node in group
 			return
 		}
 
-		//RPC datanodelist[0] to "PutSdfsfileToList"
-		informDatanodeToPutSdfsfile(datanodelist[0], sdfsfilename, reReplicaNodeList)  //Helper function at client.go
+		//RPC meta.DatanodeList[0] to "PutSdfsfileToList"
+		informDatanodeToPutSdfsfile(meta.DatanodeList[0], sdfsfilename, reReplicaNodeList)  //Helper function at client.go
 		
-		datanodelist = append(datanodelist, reReplicaNodeList...)
-		
+		meta.DatanodeList = append(meta.DatanodeList, reReplicaNodeList...)
+
 		fmt.Println("Re-replication complete!")
 	}	
 }
@@ -291,6 +290,6 @@ func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]strin
 
 	//Check if each sdfsfile has sufficient replicas
 	for sdfsfilename, filemetadata := range filemap {
-		checkReplica(sdfsfilename, filemetadata.DatanodeList)
+		checkReplica(sdfsfilename, filemetadata)
 	}
 }

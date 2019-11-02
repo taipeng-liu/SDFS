@@ -217,7 +217,7 @@ func (c *Client) DeleteFileMetadata(sdfsfilename string) error {
 func PutFile(filenames []string) {
 
 	if len(filenames) < 2 {
-		fmt.Println("Wrong Format!! It should be: put [localfilename] [sdfsfilename]")
+		fmt.Println("Usage: put [localfilename] [sdfsfilename]")
 		return
 	}
 
@@ -237,13 +237,11 @@ func PutFile(filenames []string) {
 
 	//Check if sdfsfile exist
 	namenodeAddr := GetNamenodeAddr()
-	fmt.Println("GetNamenodeAddr works!!")
 
 	client := NewClient(namenodeAddr + ":" + Config.NamenodePort)
 	client.Dial()
 
 	datanodeList, n := client.GetDatanodeList(sdfsfilename)
-	fmt.Println("GetDatanodeList works!!")
 
 	if n == 0 {
 		//No datanode store this sdfsfile, insert it
@@ -261,8 +259,6 @@ func PutFile(filenames []string) {
 
 	//Shared Variable: Write Quorum for uploading localfile to datanodes
 	var respCount int = 0
-
-	// var mutex sync.Mutex
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
@@ -285,7 +281,7 @@ func PutFile(filenames []string) {
 //get command: get [sdfsfilename] [localfilename]
 func GetFile(filenames []string) {
 	if len(filenames) < 2 {
-		fmt.Println("Wrong Format!! It should be: get [sdfsfilename] [localfilename]")
+		fmt.Println("Usage: get [sdfsfilename] [localfilename]")
 		return
 	}
 
@@ -339,7 +335,7 @@ func GetFile(filenames []string) {
 // delete command: delete sdfsfilename
 func DeleteFile(filenames []string) {
 	if len(filenames) < 1 {
-		fmt.Println("Format: delete [sdfsfilename]")
+		fmt.Println("Usage: delete [sdfsfilename]")
 	}
 
 	sdfsfilename := filenames[0]
@@ -383,7 +379,7 @@ func DeleteFile(filenames []string) {
 //ls sdfsfilename command: list all machine (VM) addresses where this file is currently being stored
 func ShowDatanode(filenames []string) {
 	if len(filenames) < 1 {
-		fmt.Println("Format: ls [sdfsfilename]")
+		fmt.Println("Usage: ls [sdfsfilename]")
 		return
 	}
 
@@ -401,8 +397,8 @@ func ShowDatanode(filenames []string) {
 	}
 
 	//Print the list
-	fmt.Printf("Servers who save the file %s:\n", sdfsfilename)
-	log.Printf("Servers who save the file %s:\n", sdfsfilename)
+	fmt.Printf("Datanodes who save the file %s:\n", sdfsfilename)
+	log.Printf("Datanodes who save the file %s:\n", sdfsfilename)
 	for _, datanodeID := range datanodeList {
 		fmt.Println(datanodeID)
 	}
@@ -423,7 +419,6 @@ func Clear() {
 		log.Println("Clear() error")
 		return
 	}
-	fmt.Println("Clear all files in sdfsFile")
 }
 
 ///////////////////////////////////Helper functions/////////////////////////////////////////
@@ -462,7 +457,6 @@ func GetNamenodeAddr() string {
 func WaitingForFailedNodeID() {
 	for true {
 		failedNodeID := <- Mem.FailedNodeID
-		fmt.Println("Sdfs: Receive failedNodeID from Mem.Updater: ", failedNodeID)
 
 		var updateOK bool
 

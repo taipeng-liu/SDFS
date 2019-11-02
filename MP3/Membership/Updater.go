@@ -164,7 +164,7 @@ func deleteNode(nodeID string) bool {
 	}
 	idx, found := findNode(nodeID)
 	if found {
-		fmt.Printf("NodeID %s may fail or leave the group\n", nodeID)
+		fmt.Printf("NodeID %s fails or leaves the group\n", nodeID)
 		if idx != len(MembershipList)-1 {
 			MembershipList = append(MembershipList[:idx], MembershipList[idx+1:]...)
 		} else {

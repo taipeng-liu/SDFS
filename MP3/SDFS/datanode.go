@@ -76,7 +76,6 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 		}
 	}
 
-	fmt.Printf("NamenodeID is: %s\n", d.NamenodeID)
 	*resp = Config.GetIPAddressFromID(d.NamenodeID)
 	return nil
 }
@@ -208,6 +207,9 @@ func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error {
 			break
 		}
 	}
+
+	fmt.Println("Delete sdfsfile ", req.Filename)
+	log.Println("Datanode: Delete sdfsfile ", req.Filename)
 
 	return nil
 }
