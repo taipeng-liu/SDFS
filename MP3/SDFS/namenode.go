@@ -81,6 +81,7 @@ func WaitUpdateFilemapChan(Filemap map[string]*FileMetadata, Nodemap map[string]
 		if reReplicaFileList, ok := Nodemap[failedNodeID]; ok {
 			//delete from Nodemap
 			delete(Nodemap, failedNodeID)
+			fmt.Println("RRList",reReplicaFileList)
 
 			//Also update Filemap and re-replicate files
 			for _, filename := range reReplicaFileList {
@@ -194,7 +195,7 @@ func insert(filemap map[string]*FileMetadata, sdfsfilename string, datanodeID st
 	}
 }
 
-func checkReplica(sdfsfilename string, meta *FileMetadata) {
+func checkReplica(sdfsfilename string, meta *FileMetadata, nodemap map[string][]string) {
 	n := len(meta.DatanodeList)
 
 	if n > Config.ReplicaNum - 1 {
@@ -223,7 +224,17 @@ func checkReplica(sdfsfilename string, meta *FileMetadata) {
 		//RPC meta.DatanodeList[0] to "PutSdfsfileToList"
 		informDatanodeToPutSdfsfile(meta.DatanodeList[0], sdfsfilename, reReplicaNodeList)  //Helper function at client.go
 		
+		//Update filemap
 		meta.DatanodeList = append(meta.DatanodeList, reReplicaNodeList...)
+
+		//Update nodemap
+		for _, nodeID := reReplicaNodeList {
+			if _, ok := nodemap[nodeID]; ok{
+				nodemap[nodeID] = append(nodemap[nodeID], sdfsfilename)
+			} else{
+				nodemap[nodeID] = []string{sdfsfilename}
+			}
+		}
 
 		fmt.Println("Re-replication complete!")
 	}	
@@ -286,7 +297,7 @@ func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]strin
 
 	//Check if each sdfsfile has sufficient replicas
 	for sdfsfilename, filemetadata := range filemap {
-		checkReplica(sdfsfilename, filemetadata)
+		checkReplica(sdfsfilename, filemetadata, nodemap)
 	}
 }
 
