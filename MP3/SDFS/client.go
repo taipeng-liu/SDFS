@@ -16,7 +16,7 @@ import (
 
 const (
 	R = 1
-	W = (Config.ReplicaNum + 1)/2
+	W = Config.ReplicaNum
 )
 
 var KillTimeOut30s chan string = make(chan string)
@@ -263,6 +263,7 @@ func PutDir(filenames []string) {
 	}
 
 	//For each files in localdirPath, run PutFile()
+	defer Config.TimeCount()()
 	totalFiles := len(files)
 	var fileCount int
 
