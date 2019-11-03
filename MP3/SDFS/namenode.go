@@ -91,7 +91,7 @@ func WaitUpdateFilemapChan(Filemap map[string]*FileMetadata, Nodemap map[string]
 						break
 					}
 				}
-				checkReplica(filename, Filemap[filename])
+				checkReplica(filename, Filemap[filename], Nodemap)
 			}
 		}
 	}
@@ -228,7 +228,7 @@ func checkReplica(sdfsfilename string, meta *FileMetadata, nodemap map[string][]
 		meta.DatanodeList = append(meta.DatanodeList, reReplicaNodeList...)
 
 		//Update nodemap
-		for _, nodeID := reReplicaNodeList {
+		for _, nodeID := range reReplicaNodeList {
 			if _, ok := nodemap[nodeID]; ok{
 				nodemap[nodeID] = append(nodemap[nodeID], sdfsfilename)
 			} else{
