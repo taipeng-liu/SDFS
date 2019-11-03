@@ -24,7 +24,9 @@ var YESorNO chan bool = make(chan bool)
 var PutFinishChan chan string = make(chan string)
 var GetFinishChan chan string = make(chan string)
 var DeleteFinishChan chan string = make(chan string)
+var AllFilePutFinishChan chan string = make(chan string)
 var mutex sync.Mutex
+var fileCountMutex sync.Mutex
 
 type Client struct {
 	Addr      string
@@ -217,14 +219,68 @@ func (c *Client) DeleteFileMetadata(sdfsfilename string) error {
 }
 
 /////////////////////Functions Called from main.go////////////////////////
-
-//put command: put [localfilename] [sdfsfilename]
-func PutFile(filenames []string) {
+func PutFileOrPutDir(filenames []string) {
 
 	if len(filenames) < 2 {
 		fmt.Println("Usage: put [localfilename] [sdfsfilename]")
 		return
 	}
+
+	localfilePath := Config.LocalfileDir + "/" + filenames[0]
+
+	fi, err := os.Stat(localfilePath)
+
+	//Check if localfile exists
+	if os.IsNotExist(err) {
+		fmt.Printf("===Error: %s does not exsit in local!\n", localfilePath)
+		log.Printf("===Error: %s does not exsit in local!\n", localfilePath)
+		return
+	}
+
+	//Check file mode
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		fmt.Println("Running PutDir...")
+		PutDir(filenames)
+	case mode.IsRegular():
+		fmt.Println("Running PutFile...")
+		var notUsed int
+		PutFile(filenames, false, &notUsed, 1)
+	}
+}
+
+func PutDir(filenames []string) {
+
+	localdirname := filenames[0]
+	sdfsdirname := filenames[1]
+
+	localdirPath := Config.LocalfileDir + "/" + localdirname
+
+	//Get the list of files in localdirPath
+	files, err := ioutil.ReadDir(localdirPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//For each files in localdirPath, run PutFile()
+	totalFiles := len(files)
+	var fileCount int
+
+	for _, file := range files {
+		subfilenames := []string{localdirname + "/" + file.Name(), sdfsdirname + "/" + file.Name()} 
+		go PutFile(subfilenames, true, &fileCount, totalFiles)
+	}
+
+	<-AllFilePutFinishChan
+
+	fmt.Println("PutDir successfully return")
+	log.Println("====PutDir successfully return")
+
+	return
+}
+
+//put command: put [localfilename] [sdfsfilename]
+func PutFile(filenames []string, fromDir bool, fileCount *int, totalFiles int) {
 
 	//localfilename or sdfsfilename
 	localfilename := filenames[0]
@@ -275,8 +331,19 @@ func PutFile(filenames []string) {
 
 	client.Close()
 
-	fmt.Println("PutFile successfully return")
-	log.Println("====PutFile successfully return")
+	if fromDir {
+		//Add 1 to fileCount
+		fileCountMutex.Lock()
+		(*fileCount)++
+		fileCountMutex.Unlock()
+
+		if (*fileCount) == totalFiles {
+			AllFilePutFinishChan <- ""
+		}
+	} else {
+		fmt.Println("PutFile successfully return")
+		log.Println("====PutFile successfully return")
+	}
 
 	return
 }

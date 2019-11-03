@@ -63,7 +63,8 @@ func main() {
 			go Mem.ShowID()
 		case "put":
 			log.Println("Main: Put localfilename sdfsfilename")
-			go Sdfs.PutFile(parsedcmd[1:]) //"SDFS/client.go"
+			go Sdfs.PutFileOrPutDir(parsedcmd[1:]) //SDFS/client.go
+			//go Sdfs.PutFile(parsedcmd[1:]) //"SDFS/client.go"
 		case "get":
 			log.Println("Main: Get sdfsfilename localfilename")
 			go Sdfs.GetFile(parsedcmd[1:]) //"SDFS/client.go"
