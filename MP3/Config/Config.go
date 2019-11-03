@@ -1,13 +1,13 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
-	"fmt"
 )
 
 const (
@@ -90,6 +90,24 @@ func TimeCount() func() {
 
 	return func() {
 		cost := time.Since(start)
-		fmt.Printf("Time cost: %v\n" ,cost)
+		fmt.Printf("Time cost: %v\n", cost)
+	}
+}
+
+func EncodeFileName(src string) string {
+	res := strings.ReplaceAll(src, "/", "***")
+	return res
+}
+
+func DecodeFileName(src string) string {
+	res := strings.ReplaceAll(src, "***", "/")
+	return res
+}
+
+func Min(a int, b int) int{
+	if a < b {
+		return a
+	}else{
+		return b
 	}
 }

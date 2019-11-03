@@ -117,12 +117,7 @@ func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
 */
 func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 
-	relateIndex := make([]int, Config.ReplicaNum - 1)
-	for i := 0 ; i < Config.ReplicaNum - 1; i++ {
-		relateIndex[i] = i + 1
-	}
-
-	datanodeList := append([]string{req.NodeID}, Mem.GetListByRelateIndex(req.NodeID, relateIndex)...)
+	datanodeList := getIdelDatanodeList(len(n.Filemap))
 
 	//Updata Nodemap
 	for _, datanodeID := range datanodeList {
@@ -293,4 +288,17 @@ func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]strin
 	for sdfsfilename, filemetadata := range filemap {
 		checkReplica(sdfsfilename, filemetadata)
 	}
+}
+
+//Uniformly distribute file
+func getIdelDatanodeList(fileIdx int) []string{
+	var datanodeList []string
+
+	nodeNum := len(Mem.MembershipList)
+
+	for i:= 0; i < Config.Min(Config.ReplicaNum, nodeNum); i++{
+		datanodeList = append(datanodeList, Mem.MembershipList[(Config.ReplicaNum * fileIdx + i)%nodeNum])
+	}
+
+	return datanodeList
 }

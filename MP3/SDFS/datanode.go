@@ -14,8 +14,8 @@ import (
 )
 
 type Datanode struct {
-	NamenodeID   string   //NodeID, not Address
-	FileList     []string //list of sdfsfile
+	NamenodeID string   //NodeID, not Address
+	FileList   []string //list of sdfsfile
 }
 
 /////////////////////////////////////////Functions////////////////////////////////
@@ -48,7 +48,7 @@ func RunDatanodeServer() {
 		log.Fatal("Listen error", err)
 	}
 
-	go WaitingForFailedNodeID()    //helper function at client.go
+	go WaitingForFailedNodeID() //helper function at client.go
 
 	fmt.Printf("===RunDatanodeServer: Listen on port %s\n", Config.DatanodePort)
 	err = http.Serve(listener, mux)
@@ -71,7 +71,7 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 			OpenNamenodeServer <- ""
 		} else {
 			//This datanode is not namenode, evoke namenode!
-			EvokeNamenode(d.NamenodeID)  //helper function at client.go
+			EvokeNamenode(d.NamenodeID) //helper function at client.go
 		}
 	}
 
@@ -79,9 +79,8 @@ func (d *Datanode) GetNamenodeAddr(req string, resp *string) error {
 	return nil
 }
 
-
 //This RPC method will be called from client.go when a node fail/leave
-func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
+func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error {
 	if d.NamenodeID != "" && failedNodeID != d.NamenodeID {
 		//Namenode is still alive, don't update namenodeID
 		*resp = false
@@ -90,7 +89,7 @@ func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
 		if d.NamenodeID == Mem.LocalID {
 			UpdateFilemapChan <- failedNodeID
 		}
-	}else {
+	} else {
 		//Namenode fails or no namenode, update namenodeID locally
 		*resp = true
 		d.NamenodeID = Mem.MembershipList[0]
@@ -103,7 +102,7 @@ func (d *Datanode) UpdateNamenodeID(failedNodeID string, resp *bool) error{
 	return nil
 }
 
-func (d *Datanode) GetFileList(namenodeID string, res *[]string) error{
+func (d *Datanode) GetFileList(namenodeID string, res *[]string) error {
 	d.NamenodeID = namenodeID
 	*res = d.FileList
 	return nil
@@ -112,7 +111,10 @@ func (d *Datanode) GetFileList(namenodeID string, res *[]string) error{
 //Save contents of "sdfsfile" from client
 func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 	Config.CreateDirIfNotExist(Config.TempfileDir)
-	tempfilePath := Config.TempfileDir + "/" + req.Filename + "." + req.Hostname
+
+	encodedFileName := Config.EncodeFileName(req.Filename)
+
+	tempfilePath := Config.TempfileDir + "/" + encodedFileName + "." + req.Hostname
 
 	//Open and write
 	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE, 0644)
@@ -131,7 +133,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 		fi, _ := tempfile.Stat()
 		filesize := int(fi.Size())
 		Config.CreateDirIfNotExist(Config.SdfsfileDir)
-		sdfsfilePath := Config.SdfsfileDir + "/" + req.Filename
+		sdfsfilePath := Config.SdfsfileDir + "/" + encodedFileName
 
 		os.Rename(tempfilePath, sdfsfilePath)
 		os.RemoveAll(Config.TempfileDir)
@@ -145,15 +147,14 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 				if storedFilename == req.Filename {
 					break
 				}
-				if i == len(d.FileList) - 1 {
+				if i == len(d.FileList)-1 {
 					d.FileList = append(d.FileList, req.Filename)
 				}
 			}
 		}
 
-
-		fmt.Printf("Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
-		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", sdfsfilePath, filesize, req.Hostname)
+		fmt.Printf("Write sdfsfile %s succeed: size = %d, source = %s!!\n", req.Filename, filesize, req.Hostname)
+		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", req.Filename, filesize, req.Hostname)
 	}
 
 	resp.Response = "ok"
@@ -163,7 +164,10 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 
 //Send contents of "sdfsfile" to client
 func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
-	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
+
+	encodedFileName := Config.EncodeFileName(req.Filename)
+
+	sdfsfilepath := Config.SdfsfileDir + "/" + encodedFileName
 
 	//Open file
 	sdfsfile, err := os.Open(sdfsfilepath)
@@ -181,6 +185,7 @@ func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
 		if err != io.EOF {
 			return err
 		} else {
+			fmt.Printf("Read sdfsfile %s succeed!!\n", req.Filename)
 			resp.Eof = true
 		}
 	}
@@ -193,7 +198,9 @@ func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
 //Delete "sdfsfile"
 func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error {
 
-	sdfsfilepath := Config.SdfsfileDir + "/" + req.Filename
+	encodedFileName := Config.EncodeFileName(req.Filename)
+
+	sdfsfilepath := Config.SdfsfileDir + "/" + encodedFileName
 
 	if err := os.Remove(sdfsfilepath); err != nil {
 		return err
@@ -207,8 +214,8 @@ func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error {
 		}
 	}
 
-	fmt.Println("Delete sdfsfile ", req.Filename)
-	log.Println("Datanode: Delete sdfsfile ", req.Filename)
+	fmt.Printf("Delete sdfsfile %s succeed!!\n", req.Filename)
+	log.Printf("Datanode: Delete sdfsfile %s!!\n", req.Filename)
 
 	return nil
 }
@@ -223,6 +230,6 @@ func (d *Datanode) PutSdfsfileToList(req ReReplicaRequest, res *bool) error {
 	}
 
 	<-PutFinishChan
-	
+
 	return nil
 }
