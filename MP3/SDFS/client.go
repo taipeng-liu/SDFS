@@ -24,7 +24,6 @@ var YESorNO chan bool = make(chan bool)
 var PutFinishChan chan string = make(chan string)
 var GetFinishChan chan string = make(chan string)
 var DeleteFinishChan chan string = make(chan string)
-var AllFilePutFinishChan chan string = make(chan string)
 var mutex sync.Mutex
 var fileCountMutex sync.Mutex
 
@@ -268,11 +267,9 @@ func PutDir(filenames []string) {
 	var fileCount int
 
 	for _, file := range files {
-		subfilenames := []string{localdirname + "/" + file.Name(), sdfsdirname + "/" + file.Name()} 
-		go PutFile(subfilenames, true, &fileCount, totalFiles)
+		subfilenames := []string{localdirname + "/" + file.Name(), sdfsdirname + "/" + file.Name()}
+		PutFile(subfilenames, true, &fileCount, totalFiles)
 	}
-
-	<-AllFilePutFinishChan
 
 	fmt.Println("PutDir successfully return")
 	log.Println("====PutDir successfully return")
@@ -332,19 +329,8 @@ func PutFile(filenames []string, fromDir bool, fileCount *int, totalFiles int) {
 
 	client.Close()
 
-	if fromDir {
-		//Add 1 to fileCount
-		fileCountMutex.Lock()
-		(*fileCount)++
-		fileCountMutex.Unlock()
-
-		if (*fileCount) == totalFiles {
-			AllFilePutFinishChan <- ""
-		}
-	} else {
-		fmt.Println("PutFile successfully return")
-		log.Println("====PutFile successfully return")
-	}
+	fmt.Println("PutFile successfully return")
+	log.Println("====PutFile successfully return")
 
 	return
 }

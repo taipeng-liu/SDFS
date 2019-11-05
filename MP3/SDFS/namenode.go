@@ -6,15 +6,15 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
-	"time"
 	"sort"
+	"time"
 
 	Config "../Config"
 	Mem "../Membership"
 )
 
 var OpenNamenodeServer chan string = make(chan string)
-var UpdateFilemapChan chan string = make(chan string)  //Receive failedNodeID
+var UpdateFilemapChan chan string = make(chan string) //Receive failedNodeID
 
 type FileMetadata struct {
 	DatanodeList []string
@@ -22,15 +22,15 @@ type FileMetadata struct {
 }
 
 type Namenode struct {
-	Filemap map[string]*FileMetadata  //Key:sdfsFilename  Value:Pointer of metadata
-	Nodemap map[string][]string 	  //Key:NodeID        Value:Pointer of fileList
+	Filemap map[string]*FileMetadata //Key:sdfsFilename  Value:Pointer of metadata
+	Nodemap map[string][]string      //Key:NodeID        Value:Pointer of fileList
 }
 
 //////////////////////////////////////////Functions////////////////////////////////////////////
 
 func RunNamenodeServer() {
 
-	<- OpenNamenodeServer
+	<-OpenNamenodeServer
 
 	var namenode = new(Namenode)
 
@@ -62,9 +62,8 @@ func RunNamenodeServer() {
 	}
 
 	getCurrentMaps(namenode.Filemap, namenode.Nodemap)
-	
-	go WaitUpdateFilemapChan(namenode.Filemap, namenode.Nodemap)
 
+	go WaitUpdateFilemapChan(namenode.Filemap, namenode.Nodemap)
 
 	fmt.Printf("===RunNamenodeServer: Listen on port %s\n", Config.NamenodePort)
 	err = http.Serve(listener, mux)
@@ -75,17 +74,16 @@ func RunNamenodeServer() {
 
 func WaitUpdateFilemapChan(Filemap map[string]*FileMetadata, Nodemap map[string][]string) {
 	for {
-		failedNodeID := <- UpdateFilemapChan
+		failedNodeID := <-UpdateFilemapChan
 
 		//If failed nodeID can be found in Nodemap
 		if reReplicaFileList, ok := Nodemap[failedNodeID]; ok {
 			//delete from Nodemap
 			delete(Nodemap, failedNodeID)
-			fmt.Println("RRList",reReplicaFileList)
 
 			//Also update Filemap and re-replicate files
 			for _, filename := range reReplicaFileList {
-				for idx, nodeID := range Filemap[filename].DatanodeList{
+				for idx, nodeID := range Filemap[filename].DatanodeList {
 					if nodeID == failedNodeID {
 						Filemap[filename].DatanodeList = append(Filemap[filename].DatanodeList[:idx], Filemap[filename].DatanodeList[idx+1:]...)
 						break
@@ -118,7 +116,7 @@ func (n *Namenode) GetDatanodeList(req FindRequest, resp *FindResponse) error {
 */
 func (n *Namenode) InsertFile(req InsertRequest, resp *InsertResponse) error {
 
-	datanodeList := getIdelDatanodeList(len(n.Filemap))
+	datanodeList := getIdleDatanodeList(len(n.Filemap))
 
 	//Updata Nodemap
 	for _, datanodeID := range datanodeList {
@@ -140,8 +138,8 @@ func (n *Namenode) DeleteFileMetadata(filename string, resp *bool) error {
 		delete(n.Filemap, filename)
 
 		//Delete from Nodemap
-		for _, datanodeID := range filemetadata.DatanodeList{
-			for idx, storedfilename := range n.Nodemap[datanodeID]{
+		for _, datanodeID := range filemetadata.DatanodeList {
+			for idx, storedfilename := range n.Nodemap[datanodeID] {
 				if storedfilename == filename {
 					n.Nodemap[datanodeID] = append(n.Nodemap[datanodeID][:idx], n.Nodemap[datanodeID][idx+1:]...)
 					break
@@ -183,14 +181,14 @@ func (n *Namenode) GetWritePermission(req PermissionRequest, res *bool) error {
 
 ///////////////////////////////////Helper functions////////////////////////////
 
-func insert(filemap map[string]*FileMetadata, sdfsfilename string, datanodeID string){
+func insert(filemap map[string]*FileMetadata, sdfsfilename string, datanodeID string) {
 	if filemetadata, ok := filemap[sdfsfilename]; ok {
-		//filemap[sdfsfilename] exist		
+		//filemap[sdfsfilename] exist
 		filemetadata.DatanodeList = append(filemetadata.DatanodeList, datanodeID)
 		sort.Strings(filemetadata.DatanodeList)
 	} else {
 		//filemap[sdfsfilename] not exist
-		newfilemetadata := FileMetadata{[]string{datanodeID},time.Now()} //TODO Set LastWrtTime = time.Now() may cause some strange performance.
+		newfilemetadata := FileMetadata{[]string{datanodeID}, time.Now()} //TODO Set LastWrtTime = time.Now() may cause some strange performance.
 		filemap[sdfsfilename] = &newfilemetadata
 	}
 }
@@ -198,49 +196,49 @@ func insert(filemap map[string]*FileMetadata, sdfsfilename string, datanodeID st
 func checkReplica(sdfsfilename string, meta *FileMetadata, nodemap map[string][]string) {
 	n := len(meta.DatanodeList)
 
-	if n > Config.ReplicaNum - 1 {
+	if n > Config.ReplicaNum-1 {
 		//At least n = "ReplicaNum" datanodes store the sdfsfile
 		return
-	} else if n < 1{
+	} else if n < 1 {
 		//Debug use. Normally, this line will never be printed.
 		fmt.Println("Wrong! File isn't stored in any datanodes.")
-	} else 	{
+	} else {
 		//Not enough replicas
 		fmt.Println("Start re-replicating...")
-		defer Config.TimeCount()()		
+		defer Config.TimeCount()()
 
 		neededReReplicaNum := Config.ReplicaNum - n
 
 		sort.Strings(meta.DatanodeList)
 
 		reReplicaNodeList, len := findDifferenceOfTwoLists(Mem.MembershipList, meta.DatanodeList, neededReReplicaNum)
-		
-		fmt.Println("reReplicaNodeList ", reReplicaNodeList)
+
+		fmt.Println("The list of nodes to do reReplicate is: ", reReplicaNodeList)
 		if len == 0 {
 			//MembershipList == meta.DatanodeList, e.g. only 1 node in group
 			return
 		}
 
 		//RPC meta.DatanodeList[0] to "PutSdfsfileToList"
-		informDatanodeToPutSdfsfile(meta.DatanodeList[0], sdfsfilename, reReplicaNodeList)  //Helper function at client.go
-		
+		informDatanodeToPutSdfsfile(meta.DatanodeList[0], sdfsfilename, reReplicaNodeList) //Helper function at client.go
+
 		//Update filemap
 		meta.DatanodeList = append(meta.DatanodeList, reReplicaNodeList...)
 
 		//Update nodemap
 		for _, nodeID := range reReplicaNodeList {
-			if _, ok := nodemap[nodeID]; ok{
+			if _, ok := nodemap[nodeID]; ok {
 				nodemap[nodeID] = append(nodemap[nodeID], sdfsfilename)
-			} else{
+			} else {
 				nodemap[nodeID] = []string{sdfsfilename}
 			}
 		}
 
 		fmt.Println("Re-replication complete!")
-	}	
+	}
 }
 
-//This function first find the first same element in both sorted lists, 
+//This function first find the first same element in both sorted lists,
 //and then returns N different numbers in bigList starting from that element.
 //Note: smallList is a subset of bigList
 func findDifferenceOfTwoLists(bigList []string, smallList []string, N int) ([]string, int) {
@@ -253,12 +251,12 @@ func findDifferenceOfTwoLists(bigList []string, smallList []string, N int) ([]st
 			break
 		}
 	}
-	
+
 	smallListIdx := 1
 
-	for i := (startIdx + 1)%bigListLen; i != startIdx ; i = (i+1)%bigListLen {
+	for i := (startIdx + 1) % bigListLen; i != startIdx; i = (i + 1) % bigListLen {
 		if N > 0 {
-			if smallListIdx < len(smallList) && bigList[i] == smallList[smallListIdx]{
+			if smallListIdx < len(smallList) && bigList[i] == smallList[smallListIdx] {
 				smallListIdx++
 				continue
 			}
@@ -279,10 +277,10 @@ func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]strin
 
 		client := NewClient(nodeAddr + ":" + Config.DatanodePort)
 		client.Dial()
-		
+
 		var filelist []string
-		client.rpcClient.Call("Datanode.GetFileList",Mem.LocalID, &filelist)
-		
+		client.rpcClient.Call("Datanode.GetFileList", Mem.LocalID, &filelist)
+
 		nodemap[nodeID] = filelist
 
 		client.Close()
@@ -302,13 +300,13 @@ func getCurrentMaps(filemap map[string]*FileMetadata, nodemap map[string][]strin
 }
 
 //Uniformly distribute file
-func getIdelDatanodeList(fileIdx int) []string{
+func getIdleDatanodeList(fileIdx int) []string {
 	var datanodeList []string
 
 	nodeNum := len(Mem.MembershipList)
 
-	for i:= 0; i < Config.Min(Config.ReplicaNum, nodeNum); i++{
-		datanodeList = append(datanodeList, Mem.MembershipList[(Config.ReplicaNum * fileIdx + i)%nodeNum])
+	for i := 0; i < Config.Min(Config.ReplicaNum, nodeNum); i++ {
+		datanodeList = append(datanodeList, Mem.MembershipList[(Config.ReplicaNum*fileIdx+i)%nodeNum])
 	}
 
 	return datanodeList
