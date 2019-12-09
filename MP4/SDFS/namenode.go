@@ -156,6 +156,8 @@ func deleteInputFiles(Workingmap map[string]*WorkerInfo) {
 			}
 
 			client.Close()
+
+			Workingmap[nodeID].IntermediateFileList = []string{}
 		}
 	fmt.Println("All Cache Cleared")
 	}
@@ -236,6 +238,10 @@ func taskKeeper(remainTask int, Workingmap map[string]*WorkerInfo, taskType stri
 					}
 				case "map":
 					cachemap = getCacheMapFromWorkingmap(Workingmap)
+				}
+
+				for nodeID, _ := range Workingmap {
+					Workingmap[nodeID].TaskList = []*Task{}
 				}
 
 				fmt.Printf("====TaskKeeper: All %s tasks finished!\n", taskType)
