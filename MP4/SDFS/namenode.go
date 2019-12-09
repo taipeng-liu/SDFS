@@ -480,6 +480,10 @@ func ListenOnNewNode(Workingmap map[string]*WorkerInfo) {
 	for true {
 		NewNodeID := <-Mem.NewNodeChan
 
+		if NewNodeID == Mem.LocalID {
+			continue
+		}
+
 		privateChan := make(chan string)
 
 		wi := WorkerInfo{[]*Task{}, []string{}, privateChan}

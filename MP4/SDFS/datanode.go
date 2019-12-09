@@ -465,6 +465,8 @@ func RunMapTask(req Task, namenodeID string) error {
 	var res int
 	client.rpcClient.Call("Namenode.SendWorkerFinishMsg", Mem.LocalID, &res)
 
+	fmt.Println("Calling namenode")
+
 	client.Close()
 
 	return nil
