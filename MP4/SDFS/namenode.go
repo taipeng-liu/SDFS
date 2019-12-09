@@ -59,6 +59,9 @@ func (n *Namenode) RunMapper(mapperArg MapperArg, res *int) error {
 
 	//Evoke all nodes
 	for NodeID, _ := range n.Workingmap {
+		if NodeID == Mem.LocalID {
+			continue
+		}
 		go waitForTaskChan(NodeID, n.Workingmap)
 	}
 
@@ -104,6 +107,10 @@ func (n *Namenode) RunReducer(reducerArg ReducerArg, res *int) error {
 
 	//Evoke all nodes
 	for NodeID, _ := range n.Workingmap {
+		if NodeID == Mem.LocalID {
+			continue
+		}
+
 		go waitForTaskChan(NodeID, n.Workingmap)
 	}
 
