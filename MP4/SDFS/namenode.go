@@ -216,7 +216,7 @@ func taskKeeper(remainTask int, Workingmap map[string]*WorkerInfo, taskType stri
 			if remainTask == 0 {
 				fmt.Println("TaskKeeper: remainTask is zero")
 
-				for i := 0; i < len(Workingmap); i++ {
+				for i := 0; i < len(Workingmap) - 1; i++ {
 					TaskChan <- nil
 				}
 
