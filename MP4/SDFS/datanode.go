@@ -531,6 +531,8 @@ func RunReduceTask(req Task, namenodeID string) {
 
 	os.Remove(tempFileDir)
 
+	fmt.Printf("Reduce task %d finish!", req.TaskID)
+
 	//When finish work, RPC namanode
 	addr := Config.GetIPAddressFromID(namenodeID)
 	client := NewClient(addr + ":" + Config.NamenodePort)
