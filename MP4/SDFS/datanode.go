@@ -353,7 +353,7 @@ func (d *Datanode) SubmitTask(req string, res *[]string) error {
 }
 
 //Scan the Map-Input Files, call Map.exe per 10-lines
-func RunMapTask(req Task, namenodeID string) error {
+func RunMapTask(req Task, namenodeID string) {
 	tempFileDir := Config.LocalfileDir + "/" + Config.TempFile
 	for _, fileName := range req.FileList {
 		fmt.Printf("Start Map Task for File %s\n", fileName)
@@ -370,7 +370,7 @@ func RunMapTask(req Task, namenodeID string) error {
 		if err != nil {
 			fmt.Printf("src_file %s os.Open() error\n", decodedFileName)
 			log.Println("os.Open() error")
-			return err
+			return
 		}
 		defer data.Close()
 
@@ -391,14 +391,14 @@ func RunMapTask(req Task, namenodeID string) error {
 				temp, err := os.Create(tempFileDir)
 				if err != nil {
 					fmt.Println("Datanode.RunMapTask.Scanner: os.Create() error")
-					return err
+					return
 				}
 
 				_, err = temp.WriteString(buf)
 				if err != nil {
 					fmt.Println("Datanode.RunMapTask: temp_file WriteString error")
 					log.Println("temp_file WriteString error")
-					return err
+					return
 				}
 				//fmt.Println("*****Temp File Write Succeed!")
 
@@ -426,7 +426,7 @@ func RunMapTask(req Task, namenodeID string) error {
 			temp, err := os.Create(tempFileDir)
 			if err != nil {
 				fmt.Println("os.Create() error")
-				return err
+				return
 			}
 
 			//fmt.Println("*****Temp Created!")
@@ -463,24 +463,24 @@ func RunMapTask(req Task, namenodeID string) error {
 	client.Dial()
 
 	var res int
-	client.rpcClient.Call("Namenode.SendWorkerFinishMsg", Mem.LocalID, &res)
-
-	fmt.Println("Calling namenode")
+	if err := client.rpcClient.Call("Namenode.SendWorkerFinishMsg", Mem.LocalID, &res); err != nil {
+		fmt.Println("Datanode.RPC.Namenode.SendWorkerFinishMsg() error")
+	}
 
 	client.Close()
 
-	return nil
+	return
 }
 
 //Todo: Why not remove-all?
-func RunReduceTask(req Task, namenodeID string) error {
+func RunReduceTask(req Task, namenodeID string) {
 
 	tempFileDir := Config.LocalfileDir + "/" + Config.TempFile
 
 	_, err := os.Create(tempFileDir)
 	if err != nil {
 		fmt.Println("Datanode.RunReduceTask: os.Create() error")
-		return err
+		return
 	}
 
 	for _, fileName := range req.FileList {
@@ -507,7 +507,7 @@ func RunReduceTask(req Task, namenodeID string) error {
 		parseName := strings.Split(fileName, "_")
 		if len(parseName) != 2 {
 			log.Println("Parse Name Error!! Should be prefix_key")
-			return nil
+			return
 		}
 		key := parseName[1]
 
@@ -541,7 +541,7 @@ func RunReduceTask(req Task, namenodeID string) error {
 
 	client.Close()
 
-	return nil
+	return
 }
 
 //Parse Mapper output with absolutely different valaue types e.g. {"1":["5"],"2":["1","3"],"3":["4"],"4":["2"],"5":["6"],"6":["1"]}

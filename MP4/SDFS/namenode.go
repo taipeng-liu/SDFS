@@ -121,6 +121,7 @@ func (n *Namenode) RunReducer(reducerArg ReducerArg, res *int) error {
 }
 
 func (n *Namenode) SendWorkerFinishMsg(nodeID string, res *int) error {
+	fmt.Println("Receive finishMsg from node", nodeID)
 	go sendToPrivateChanManager(nodeID)
 	return nil
 }
