@@ -108,8 +108,6 @@ func (c *Client) Put(localfilename string, sdfsfilename string, isLocal bool, ap
 	}
 
 	fileSize := fileInfo.Size()
-	fmt.Printf("Put: filename = %s, size = %d, destination = %s\n", localfilepath, int(fileSize), c.Addr)
-	log.Printf("====Put: filename = %s, size = %d, destination = %s\n", localfilepath, int(fileSize), c.Addr)
 
 	//Open the file
 	localfile, err := os.Open(localfilepath)
@@ -149,15 +147,19 @@ func (c *Client) Put(localfilename string, sdfsfilename string, isLocal bool, ap
 		}
 	}
 
+	log.Printf("====Put: filename = %s, size = %d, destination = %s\n", localfilepath, int(fileSize), c.Addr)
+
 	return nil
 }
 
 func (c *Client) Get(sdfsfilename string, localfilename string, addr string) error {
-	Config.CreateDirIfNotExist(Config.TempfileDir)
-
 	tempfilePath := Config.TempfileDir + "/" + localfilename + "." + addr
 
-	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE, 0644)
+	names := Config.ParseDir(tempfilePath)
+
+	os.MkdirAll(names[0], 0755)
+
+	tempfile, err := os.OpenFile(names[0]+"/"+names[1], os.O_CREATE|os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		log.Println("os.OpenFile() error")
 		return err
@@ -182,25 +184,29 @@ func (c *Client) Get(sdfsfilename string, localfilename string, addr string) err
 
 	filePath := Config.LocalfileDir + "/" + localfilename
 
+	names = Config.ParseDir(filePath)
+
+	os.MkdirAll(names[0], 0755)
+
 	fi, _ := tempfile.Stat()
 	filesize := int(fi.Size())
 
-	Config.CreateDirIfNotExist(Config.LocalfileDir)
 	os.Rename(tempfilePath, filePath)
 
-	fmt.Printf("Get file: filename = %s, size = %d, source = %s\n", filePath, filesize, addr)
-	log.Printf("Get file: filename = %s, size = %d, source = %s\n", filePath, filesize, addr)
+	log.Printf("====Get file: filename = %s, size = %d, source = %s\n", filePath, filesize, addr)
 
 	return nil
 }
 
 func (c *Client) Delete(sdfsfilename string) error {
 	req := DeleteRequest{sdfsfilename}
+
 	var res DeleteResponse
 
 	if err := c.rpcClient.Call("Datanode.Delete", req, &res); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -218,12 +224,12 @@ func (c *Client) DeleteFileMetadata(sdfsfilename string) error {
 }
 
 func (c *Client) RpcClientCallNamenodeMapper(mapperArg MapperArg, res *int) error {
-	err:= c.rpcClient.Call("Namenode.RunMapper", mapperArg, res)
+	err := c.rpcClient.Call("Namenode.RunMapper", mapperArg, res)
 	return err
 }
 
 func (c *Client) RpcClientCallNamenodeReducer(reducerArg ReducerArg, res *int) error {
-	err:= c.rpcClient.Call("Namenode.RunReducer", reducerArg, res)
+	err := c.rpcClient.Call("Namenode.RunReducer", reducerArg, res)
 	return err
 }
 
@@ -241,18 +247,18 @@ func PutFileOrPutDir(filenames []string) {
 
 	//Check if localfile exists
 	if os.IsNotExist(err) {
-		fmt.Printf("===Error: %s does not exsit in local!\n", localfilePath)
-		log.Printf("===Error: %s does not exsit in local!\n", localfilePath)
+		fmt.Printf("===PutFileOrPutDir Error: %s does not exsit in local!\n", localfilePath)
+		log.Printf("===PutFileOrPutDir Error: %s does not exsit in local!\n", localfilePath)
 		return
 	}
 
 	//Check file mode
 	switch mode := fi.Mode(); {
 	case mode.IsDir():
-		fmt.Println("Running PutDir...")
+		//fmt.Println("Running PutDir...")
 		PutDir(filenames)
 	case mode.IsRegular():
-		fmt.Println("Running PutFile...")
+		//fmt.Println("Running PutFile...")
 		var notUsed int
 		PutFile(filenames, false, &notUsed, 1, false)
 	}
@@ -272,7 +278,7 @@ func PutDir(filenames []string) {
 	}
 
 	//For each files in localdirPath, run PutFile()
-	defer Config.TimeCount()()
+	//defer Config.TimeCount()()
 	totalFiles := len(files)
 	var fileCount int
 
@@ -281,7 +287,7 @@ func PutDir(filenames []string) {
 		PutFile(subfilenames, true, &fileCount, totalFiles, false)
 	}
 
-	fmt.Println("PutDir successfully return")
+	// fmt.Println("PutDir successfully return")
 	log.Println("====PutDir successfully return")
 
 	return
@@ -299,8 +305,8 @@ func PutFile(filenames []string, fromDir bool, fileCount *int, totalFiles int, a
 
 	//Check if localfile exists
 	if _, err := os.Stat(localfilePath); os.IsNotExist(err) {
-		fmt.Printf("===Error: %s does not exsit in local!\n", localfilePath)
-		log.Printf("===Error: %s does not exsit in local!\n", localfilePath)
+		fmt.Printf("===PutFile Error: %s does not exsit in local!\n", localfilePath)
+		log.Printf("===PutFile Error: %s does not exsit in local!\n", localfilePath)
 		return
 	}
 
@@ -330,7 +336,7 @@ func PutFile(filenames []string, fromDir bool, fileCount *int, totalFiles int, a
 
 	//Shared Variable: Write Quorum for uploading localfile to datanodes
 	var respCount int = 0
-	defer Config.TimeCount()()
+	//defer Config.TimeCount()()
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
@@ -341,8 +347,8 @@ func PutFile(filenames []string, fromDir bool, fileCount *int, totalFiles int, a
 
 	client.Close()
 
-	fmt.Println("PutFile successfully return")
-	log.Println("====PutFile successfully return")
+	// fmt.Printf("PutFile %s to %s successfully return\n", localfilename, sdfsfilename)
+	log.Printf("PutFile %s to %s successfully return\n", localfilename, sdfsfilename)
 
 	return
 }
@@ -366,14 +372,13 @@ func GetFile(filenames []string) {
 
 	if n == 0 {
 		//No datanode store sdfsfile, return
-		fmt.Printf("Get error: no sdfsfile %s\n", sdfsfilename)
 		log.Printf("Get error: no sdfsfile %s\n", sdfsfilename)
 		return
 	}
 
 	//Download sdfsfile from datanode
 	var respCount int = 0
-	defer Config.TimeCount()()
+	//defer Config.TimeCount()()
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
@@ -390,9 +395,6 @@ func GetFile(filenames []string) {
 	if err != nil {
 		log.Println("RemoveAll() error: can't remove TempfileDir")
 	}
-
-	fmt.Println("GetFile successfully return")
-	log.Println("====GetFile successfully return")
 
 	return
 }
@@ -418,7 +420,7 @@ func DeleteFile(filenames []string) {
 
 	//Delete sdfsfile in each datanode
 	var respCount int = 0
-	defer Config.TimeCount()()
+	//defer Config.TimeCount()()
 
 	for _, datanodeID := range datanodeList {
 		datanodeAddr := Config.GetIPAddressFromID(datanodeID)
@@ -433,7 +435,6 @@ func DeleteFile(filenames []string) {
 	}
 
 	client.Close()
-	fmt.Println("DeleteFile successfully return")
 	log.Println("DeleteFile successfully return")
 
 	return
@@ -470,9 +471,12 @@ func ShowDatanode(filenames []string) {
 }
 
 //store command: At any machine, list all files currently being stored at this machine
-func ShowFile() {
-	//listFile(Config.LocalfileDir) //Only for debugging, comment OUT in demo!
+func ShowSDFSFile() {
 	listFile(Config.SdfsfileDir)
+}
+
+func ShowLocalFile() {
+	listFile(Config.LocalfileDir) //Only for debugging, comment OUT in demo!
 }
 
 //clear command: Remove all sdfsfiles stored in "SDFS/sdfsFile"
@@ -541,7 +545,7 @@ func EvokeNamenode(namenodeID string) {
 	var updateOK bool
 	client.rpcClient.Call("Datanode.UpdateNamenodeID", "", updateOK)
 	if !updateOK {
-		fmt.Println("UpdateNamenodeID error")
+		log.Println("No need to Update NamenodeID")
 	}
 
 	client.Close()

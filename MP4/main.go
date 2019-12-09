@@ -9,9 +9,10 @@ import (
 	"strings"
 
 	Config "./Config"
+	mj "./MapleJuice"
 	Mem "./Membership"
 	Sdfs "./SDFS"
-	mj "./MapleJuice"
+	//"Grep" "./Grep"
 )
 
 func Parse(cmd string) []string {
@@ -48,7 +49,7 @@ func main() {
 		case "join":
 			log.Println("Main: Join the group")
 			go Mem.RunNode(isIntroducer)
-			go Sdfs.Clear() //"SDFS/client.go"
+			go Sdfs.Clear()             //"SDFS/client.go"
 			go Sdfs.RunDatanodeServer() //"SDFS/DatanodeServer.go"
 			go Sdfs.RunNamenodeServer() //"SDFS/NamenodeServer.go"
 			//TODO Decide when and where run Namenode Server???
@@ -76,7 +77,10 @@ func main() {
 			go Sdfs.ShowDatanode(parsedcmd[1:]) //"SDFS/client.go"
 		case "store":
 			log.Println("Main: Show all files")
-			go Sdfs.ShowFile() //"SDFS/client.go"
+			go Sdfs.ShowSDFSFile() //"SDFS/client.go"
+		case "local":
+			log.Println("Main: Show all files")
+			go Sdfs.ShowLocalFile() //"SDFS/client.go"
 		case "clear":
 			log.Println("Main: clear directory sdfsFile")
 			go Sdfs.Clear() //"SDFS/client.go"
@@ -93,6 +97,8 @@ func main() {
 			go mj.RunMapper(parsedcmd[1:])
 		case "juice":
 			go mj.RunReducer(parsedcmd[1:])
+		//case "grep":
+		//	go Grep.RunGrep(parsedcmd[1:])
 		default:
 			log.Println("Main: Don't support this command")
 		}

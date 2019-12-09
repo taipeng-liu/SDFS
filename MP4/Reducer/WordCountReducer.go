@@ -1,29 +1,47 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
-	"bufio"
 	"strconv"
-
-	Config "../Config"
+	// "strings"
 )
 
 //General format as: key : [val]\n
-func PostProcess(wordMap map[string]int) string {
-	res := ""
 
-	for key, val := range wordMap {
-		res += key + ": " + "[" + strconv.Itoa(val) + "]" + "\n"
+func wordCount(content string) int {
+	var cnt = 0
+	var startIdx = 0
+	//Find value (Todo: make sure [ will not appear at end of line)
+	for idx, c := range content {
+		if c == '[' {
+			startIdx = idx + 1
+		} else if c == ']' {
+			val, _ := strconv.Atoi(content[startIdx:idx])
+			cnt += val
+		}
 	}
-
-	return res
+	return cnt
 }
 
+// func postProcess() string {
+// 	res := ""
+
+// 	for idx, val := range valueList {
+// 		if idx != len(valueList) - 1 {
+// 			res += val + ","
+// 		} else {
+// 			res += val + "\n"
+// 		}
+// 	}
+
+// 	fmt.Println(res)
+// 	return res
+// }
 
 func main() {
-	var output map[string]int
-	output = make(map[string]int)
+	var totalCnt = 0
 
 	//Read from argument
 	filepath := os.Args[1]
@@ -39,26 +57,16 @@ func main() {
 	//Read file line by line
 	scanner := bufio.NewScanner(file)
 
-
 	for scanner.Scan() {
 		//Parse each line
-		parsedLine := Config.ParseString(scanner.Text())
-		key := parsedLine[0]
-		value, _ := strconv.Atoi(parsedLine[1])
-
-		oldvalue, ok := output[key]
-		if !ok {
-			output[key] = value
-		} else {
-			output[key] = oldvalue + value
-		}
+		totalCnt += wordCount(scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
 		fmt.Println(err)
 	}
 
-	res := PostProcess(output)
+	// res := PostProcess(output)
 
-	fmt.Fprintf(os.Stdout, res)
+	fmt.Fprintf(os.Stdout, strconv.Itoa(totalCnt))
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	Config "../Config"
 	Mem "../Membership"
@@ -119,19 +121,17 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 
 	var tempfilePath string
 
-	tempfilePath := Config.TempfileDir + "/" + encodedFileName + "." + req.Hostname
+	tempfilePath = Config.TempfileDir + "/" + encodedFileName + "." + req.Hostname
 
 	//Open and write
-	var tempfile *File
-	
-	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE, 0644)
+	tempfile, err := os.OpenFile(tempfilePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		log.Println("os.OpenFile() error")
+		log.Println("Datanode.Put: os.OpenFile() error")
 		return err
 	}
 
 	if _, err = tempfile.WriteAt(req.Content, req.Offset); err != nil {
-		log.Println("sdfsfile.WriteAt() error", err)
+		log.Println("Datanode.Out: sdfsfile.WriteAt() error", err)
 		return err
 	}
 
@@ -165,7 +165,7 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 			}
 		}
 
-		fmt.Printf("Write sdfsfile %s succeed: size = %d, source = %s!!\n", req.Filename, filesize, req.Hostname)
+		// fmt.Printf("Write sdfsfile %s succeed: size = %d, source = %s!!\n", req.Filename, filesize, req.Hostname)
 		log.Printf("====Store sdfsfile: filename = %s, size = %d, source = %s\n", req.Filename, filesize, req.Hostname)
 	}
 
@@ -174,13 +174,16 @@ func (d *Datanode) Put(req PutRequest, resp *PutResponse) error {
 	return nil
 }
 
-
 //Send contents of "sdfsfile" to client
 func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
 
-	encodedFileName := Config.EncodeFileName(req.Filename)
+	fileName := req.Filename
 
-	sdfsfilepath := Config.SdfsfileDir + "/" + encodedFileName
+	if !strings.Contains(fileName, "cache") {
+		fileName = Config.EncodeFileName(req.Filename)
+	}
+
+	sdfsfilepath := Config.SdfsfileDir + "/" + fileName
 
 	//Open file
 	sdfsfile, err := os.Open(sdfsfilepath)
@@ -198,7 +201,7 @@ func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
 		if err != io.EOF {
 			return err
 		} else {
-			fmt.Printf("Read sdfsfile %s succeed!!\n", req.Filename)
+			// fmt.Printf("Read sdfsfile %s succeed!!\n", req.Filename)
 			resp.Eof = true
 		}
 	}
@@ -210,24 +213,42 @@ func (d *Datanode) Get(req GetRequest, resp *GetResponse) error {
 
 //Delete "sdfsfile"
 func (d *Datanode) Delete(req DeleteRequest, resp *DeleteResponse) error {
-
-	encodedFileName := Config.EncodeFileName(req.Filename)
-
-	sdfsfilepath := Config.SdfsfileDir + "/" + encodedFileName
-
-	if err := os.Remove(sdfsfilepath); err != nil {
+	//fmt.Println("Enter Delete")
+	fi, err := os.Stat(Config.SdfsfileDir + "/" + req.Filename)
+	if os.IsNotExist(err) {
+		fmt.Printf("===Delete Error: %s does not exsit in local!\n", req.Filename)
+		log.Printf("===Delete Error: %s does not exsit in local!\n", req.Filename)
 		return err
 	}
+	//fmt.Println("Start Delete for"+req.Filename)
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		err := os.RemoveAll(Config.SdfsfileDir + "/" + req.Filename)
+		if err != nil {
+			fmt.Println("os.RemoveAll Error!")
+			return err
+		}
 
-	//Assume deleted file can be found in FileList
-	for idx, filename := range d.FileList {
-		if filename == req.Filename {
-			d.FileList = append(d.FileList[:idx], d.FileList[idx+1:]...)
-			break
+	case mode.IsRegular():
+		//fmt.Println("Is file???")
+		encodedFileName := Config.EncodeFileName(req.Filename)
+
+		sdfsfilepath := Config.SdfsfileDir + "/" + encodedFileName
+
+		if err := os.Remove(sdfsfilepath); err != nil {
+			return err
+		}
+
+		//Assume deleted file can be found in FileList
+		for idx, filename := range d.FileList {
+			if filename == req.Filename {
+				d.FileList = append(d.FileList[:idx], d.FileList[idx+1:]...)
+				break
+			}
 		}
 	}
 
-	fmt.Printf("Delete sdfsfile %s succeed!!\n", req.Filename)
+	//fmt.Printf("Delete sdfsfile %s succeed!!\n", req.Filename)
 	log.Printf("Datanode: Delete sdfsfile %s!!\n", req.Filename)
 
 	return nil
@@ -239,7 +260,7 @@ func (d *Datanode) PutSdfsfileToList(req ReReplicaRequest, res *bool) error {
 	for _, nodeID := range req.DatanodeList {
 		nodeAddr := Config.GetIPAddressFromID(nodeID)
 
-		go RpcOperationAt("put", req.Filename, req.Filename, nodeAddr, Config.DatanodePort, false, &resp, len(req.DatanodeList))
+		go RpcOperationAt("put", req.Filename, req.Filename, nodeAddr, Config.DatanodePort, false, &resp, len(req.DatanodeList), false)
 	}
 
 	<-PutFinishChan
@@ -250,92 +271,278 @@ func (d *Datanode) PutSdfsfileToList(req ReReplicaRequest, res *bool) error {
 func (d *Datanode) RunMapReduce(req Task, res *int) error {
 	fmt.Printf("Datanode: Receive TaskID %d, TaskType %s, TaskExe %s\n", req.TaskID, req.TaskType, req.TaskExe)
 
-	if req.TaskType == "map" {
-		log.Printf("DataNode: Task %d Started!!\n", req.TaskID)
+	if req.TaskType == Config.Map {
+		log.Printf("DataNode: Map Task %d Started!!\n", req.TaskID)
 
-		// temp, err := os.Create(Config.LocalfileDir + "/" + Config.TempFile)
-		// if err != nil {
-		// 	fmt.Println("os.Create() error")
-		// 	return err
-		// }
-		// defer temp.Close()
+		GetFile([]string{req.TaskExe, req.TaskExe})
+
+		err := os.Chmod(Config.LocalfileDir+"/"+req.TaskExe, 0777)
+		if err != nil {
+			fmt.Println("os.Chmod() error")
+		}
 
 		fileNum := len(req.FileList)
+		log.Printf("There are %d file for this Map Task\n", fileNum)
 
-		//Call MapFunc for each file
-		for idx, fileName := range req.FileList {
-			fmt.Printf("Start Process File %s\n", fileName)
+		go RunMapTask(req, d.NamenodeID)
 
-			//Fetch SDFSfile to local file system
-			GetFile(fileName, fileName)
+	} else if req.TaskType == Config.Reduce {
+		log.Printf("DataNode: Reduce Task %d Started!!\n", req.TaskID)
 
-			//Create temp.txt in LocalfileDir
-			temp, err := os.Create(Config.LocalfileDir + "/" + Config.TempFile)
+		GetFile([]string{req.TaskExe, req.TaskExe})
+
+		err := os.Chmod(Config.LocalfileDir+"/"+req.TaskExe, 0777)
+		if err != nil {
+			fmt.Println("os.Chmod() error")
+		}
+
+		fileNum := len(req.FileList)
+		log.Printf("There are %d file for this Reduce Task\n", fileNum)
+
+		go RunReduceTask(req, d.NamenodeID)
+	} else {
+		fmt.Println("Invalid Task Name!!")
+		log.Println("Invalid Task Name!!")
+	}
+
+	return nil
+}
+
+func (d *Datanode) SubmitTask(req string, res *[]string) error {
+	//Append Map  result to per key Intermediate file
+	start := time.Now()
+
+	if req == Config.Map {
+		var cacheList []string
+
+		cacheDir := Config.CacheDir
+		files, _ := ioutil.ReadDir(cacheDir)
+
+		for _, file := range files {
+			fileName := file.Name()
+			cacheList = append(cacheList, fileName)
+		}
+
+		*res = cacheList
+
+	} else if req == Config.Reduce {
+
+		resultDir := Config.ResultDir
+		files, _ := ioutil.ReadDir(resultDir)
+
+		var cnt = 0
+		for _, file := range files {
+			fileName := file.Name()
+			PutFile([]string{"result/" + fileName, fileName}, false, &cnt, 1, true)
+		}
+
+		err := os.RemoveAll(resultDir)
+		if err != nil {
+			log.Println("os.RemoveAll() Error!!")
+			return err
+		}
+
+		*res = nil
+
+	} else {
+		log.Println("Invalid Task Name")
+	}
+
+	fmt.Printf("***Submit %s task takes %v\n", req, time.Since(start))
+	return nil
+}
+
+//Scan the Map-Input Files, call Map.exe per 10-lines
+func RunMapTask(req Task, namenodeID string) error {
+	tempFileDir := Config.LocalfileDir + "/" + Config.TempFile
+	for _, fileName := range req.FileList {
+		fmt.Printf("Start Map Task for File %s\n", fileName)
+
+		//Fetch SDFSfile to local file system
+		GetFile([]string{fileName, fileName})
+
+		//Create temp.txt in LocalfileDir
+
+		//Scan file
+		decodedFileName := Config.DecodeFileName(fileName)
+		//fmt.Println("Src file name:", decodedFileName)
+		data, err := os.Open(Config.LocalfileDir + "/" + decodedFileName)
+		if err != nil {
+			fmt.Printf("src_file %s os.Open() error\n", decodedFileName)
+			log.Println("os.Open() error")
+			return err
+		}
+		defer data.Close()
+
+		var scanner = bufio.NewScanner(data)
+
+		var lineCnt = 0
+		var buf = ""
+
+		for scanner.Scan() {
+			// fmt.Println(scanner.Text())
+			//Deal with EOF
+			if lineCnt < 10 {
+				buf += scanner.Text() + "\n"
+				//fmt.Println("Read line")
+				lineCnt += 1
+			} else {
+				// MapFunc(req.TaskExe)
+				temp, err := os.Create(tempFileDir)
+				if err != nil {
+					fmt.Println("Datanode.RunMapTask.Scanner: os.Create() error")
+					return err
+				}
+
+				_, err = temp.WriteString(buf)
+				if err != nil {
+					fmt.Println("Datanode.RunMapTask: temp_file WriteString error")
+					log.Println("temp_file WriteString error")
+					return err
+				}
+				//fmt.Println("*****Temp File Write Succeed!")
+
+				//Todo: Need to close?
+				temp.Close()
+
+				cmd := exec.Command(Config.LocalfileDir+"/"+req.TaskExe, tempFileDir)
+				res, err := cmd.Output()
+				if err != nil {
+					fmt.Println(buf)
+					fmt.Println("Datanode.RunMapTask: cmd.Output Error")
+				}
+
+				//fmt.Printf("*****CMD succeed: res is: %s!!\n", res)
+
+				parseMapRes(res, req.Output)
+
+				lineCnt = 0
+				buf = ""
+			}
+		}
+
+		if lineCnt != 0 {
+			// fmt.Println("Scanner exit")
+			temp, err := os.Create(tempFileDir)
 			if err != nil {
 				fmt.Println("os.Create() error")
 				return err
 			}
 
-			//Scan file
-			data, err := os.Open(Config.LocalfileDir + "/" + fileName)
+			//fmt.Println("*****Temp Created!")
+
+			_, err = temp.WriteString(buf)
 			if err != nil {
-				log.Println("os.Open() error")
-				return err
-			}
-			var scanner = bufio.NewScanner(data)
-
-			var lineCnt = 0
-
-			var buf = ""
-
-			//TODO if EOF but lineCnt < 10 .....(taipeng2)
-			for scanner.Scan() {
-				// fmt.Println(scanner.Text())
-				//Deal with EOF
-				if lineCnt < 10 && scanner.hasNext() {
-					strings.Join(buf, scanner.Text())
-				} else {
-					// MapFunc(req.TaskExe)
-
-					_, err := temp.WriteString(buf)
-					if err != nil {
-						panic(err)
-					}
-
-					cmd := exec.Command("./"+req.TaskExe, temp)
-					res, _ := cmd.Output()
-
-					parseMapRes(res, Task.Output)
-
-					defer temp.Close()
-					lineCnt = 0
-					buf = ""
-				}
+				panic(err)
 			}
 
+			//fmt.Println("*****Temp File Write Succeed!")
+
+			cmd := exec.Command(Config.LocalfileDir+"/"+req.TaskExe, tempFileDir)
+			res, err := cmd.Output()
+			if err != nil {
+				fmt.Println("cmd.Output Error")
+			}
+
+			//fmt.Printf("*****CMD succeed: res is: %s!!\n", res)
+
+			parseMapRes(res, req.Output)
 		}
 
+		//fmt.Printf("Map Task for fileName %s succeed!\n", fileName)
+
 	}
+
+	os.Remove(tempFileDir)
+
+	fmt.Printf("Map Task %d succeed!\n", req.TaskID)
+
+	//When finish work, RPC namanode
+	addr := Config.GetIPAddressFromID(namenodeID)
+	client := NewClient(addr + ":" + Config.NamenodePort)
+	client.Dial()
+
+	var res int
+	client.rpcClient.Call("Namenode.SendWorkerFinishMsg", Mem.LocalID, &res)
+
+	client.Close()
+
+	return nil
 }
 
-/*
-func (d *Datanode) MapFunc(mapEXE string) {
+//Todo: Why not remove-all?
+func RunReduceTask(req Task, namenodeID string) error {
 
-	encodedFileName := Config.EncodeFileName(req.Filename)
+	tempFileDir := Config.LocalfileDir + "/" + Config.TempFile
 
-	sdfsfilepath := Config.SdfsfileDir + "/" + encodedFileName
-
-	//Open file
-
+	_, err := os.Create(tempFileDir)
 	if err != nil {
-		log.Printf("os.Open() can't open file %s\n", sdfsfilepath)
+		fmt.Println("Datanode.RunReduceTask: os.Create() error")
 		return err
 	}
-	defer sdfsfile.Close()
-}
-*/
 
-//xiangl14 TODO: How to parse Mapper output with absolutely different valaue types e.g. {"1":["5"],"2":["1","3"],"3":["4"],"4":["2"],"5":["6"],"6":["1"]}
+	for _, fileName := range req.FileList {
+		//fmt.Printf("Start Reduce Task for File %s\n", fileName)
+
+		//Stale way: Fetch SDFSfile to local file system
+		// GetFile([]string{fileName, fileName})
+
+		cacheList := req.CacheMap[fileName]
+
+
+		for _, nodeID := range cacheList {
+			//fmt.Printf("%s has this file!!\n", nodeID)
+			nodeAddr := Config.GetIPAddressFromID(nodeID)
+			var respCount int = 0
+			go RpcOperationAt("get", fileName, "cache/"+fileName, nodeAddr, Config.DatanodePort, true, &respCount, 1, false)
+			<-GetFinishChan
+			err := Config.AppendFileToFile(tempFileDir, Config.LocalfileDir+"/"+fileName)
+			if err != nil {
+				fmt.Println(": Append temp to localFile error")
+			}
+		}
+		//fmt.Println("Getout of loop")
+		parseName := strings.Split(fileName, "_")
+		if len(parseName) != 2 {
+			log.Println("Parse Name Error!! Should be prefix_key")
+			return nil
+		}
+		key := parseName[1]
+
+		decodedFileName := Config.DecodeFileName(fileName)
+		//fmt.Println("Src file name:", decodedFileName)
+
+		ReduceInputDir := Config.LocalfileDir + "/" + decodedFileName
+
+		cmd := exec.Command(Config.LocalfileDir+"/"+req.TaskExe, ReduceInputDir)
+		output, _ := cmd.Output()
+
+		res := FormatOutput(output, key)
+
+		err := os.Remove(Config.LocalfileDir + "/" + fileName)
+		if err != nil {
+			fmt.Println("os.Remove error!")
+		}
+
+		CacheReduceOutput(res, req.Output)
+	}
+
+	os.Remove(tempFileDir)
+
+	//When finish work, RPC namanode
+	addr := Config.GetIPAddressFromID(namenodeID)
+	client := NewClient(addr + ":" + Config.NamenodePort)
+	client.Dial()
+
+	var res int
+	client.rpcClient.Call("Namenode.SendWorkerFinishMsg", Mem.LocalID, &res)
+
+	client.Close()
+
+	return nil
+}
+
+//Parse Mapper output with absolutely different valaue types e.g. {"1":["5"],"2":["1","3"],"3":["4"],"4":["2"],"5":["6"],"6":["1"]}
 func parseMapRes(res []byte, prefix string) error {
 	s := string(res)
 
@@ -352,7 +559,16 @@ func parseMapRes(res []byte, prefix string) error {
 			}
 		} else {
 			if s[i] == '\n' {
-				MapperOutput(key, val, prefix)
+				val = append(val, s[i]) //Each value ends with '\n'
+				err := CacheMapOutput(key, val, prefix)
+				if err != nil {
+					//panic(err)
+					fmt.Println("MapperOutput error")
+					return err
+				}
+				isKey = true
+				key = key[:0]
+				val = val[:0]
 			} else {
 				val = append(val, s[i])
 			}
@@ -369,9 +585,53 @@ func parseMapRes(res []byte, prefix string) error {
 	return nil
 }
 
-//xiangl14 TODO: GetFile then manually append it, then Putfile
-func MapperOutput(key []byte, val []byte, prefix string) {
+//Todo: Check
+func CacheMapOutput(key []byte, val []byte, prefix string) error {
 
-	PutFile()
+	Config.CreateDirIfNotExist(Config.CacheDir)
 
+	fileName := prefix + "_" + string(key)
+	fileDir := Config.CacheDir + "/" + fileName
+
+	file, err := os.OpenFile(fileDir, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("os.OpenFile() error")
+		return err
+	}
+	defer file.Close()
+
+	n, err := file.Write(val)
+	if err != nil || n <= 0 {
+		return err
+	}
+
+	//fmt.Printf("Map Phase Write Intermediate File for %s succeed!\n", fileName)
+
+	return nil
+}
+
+func FormatOutput(output []byte, key string) string {
+	res := key + ": " + string(output) + "\n"
+	return res
+}
+
+//xiangl14 Todo: How to keep sdfs_dest_filename always sorted by key?
+func CacheReduceOutput(res string, destFileName string) error {
+	Config.CreateDirIfNotExist(Config.ResultDir)
+
+	fileDir := Config.ResultDir + "/" + destFileName
+
+	file, err := os.OpenFile(fileDir, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		fmt.Println("os.OpenFile() error")
+		return err
+	}
+	defer file.Close()
+
+	//fmt.Println("Write to:" + fileDir)
+	_, err = file.WriteString(res)
+
+	// os.Remove(fileDir)
+
+	return nil
 }

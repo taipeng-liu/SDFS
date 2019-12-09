@@ -17,6 +17,7 @@ type ReducerArg struct {
 	Sdfs_intermediate_filename_prefix string
 	Sdfs_dest_filename                string
 	Delete_input                      bool
+	Partition_way                     string
 }
 
 type Task struct {
@@ -25,6 +26,7 @@ type Task struct {
 	TaskExe   string //"WordCountMap" or "WordCountReducer"
 	StartTime time.Time
 	FileList  []string //Note: filename is decoded, e.g. "MyDirName/MyFileName"
+	CacheMap  map[string][]string
 	Output    string
 }
 
@@ -56,11 +58,11 @@ type ReReplicaRequest struct {
 }
 
 type PutRequest struct {
-	Filename string
-	Eof      bool
-	Offset   int64
-	Content  []byte
-	Hostname string
+	Filename   string
+	Eof        bool
+	Offset     int64
+	Content    []byte
+	Hostname   string
 	AppendMode bool
 }
 
@@ -71,6 +73,11 @@ type PutResponse struct {
 type AppendRequest struct {
 	Filename string
 	Content  []byte
+}
+
+type SubmitIntermFileListRequest struct {
+	IntermFileList []string
+	NodeID string
 }
 
 type GetRequest struct {
@@ -91,4 +98,10 @@ type DeleteRequest struct {
 type DeleteResponse struct {
 	Err       error
 	Statement string
+}
+
+type WorkerInfo struct {
+	TaskList []*Task //All tasks received by a node(worker)
+	IntermediateFileList []string //All intermediate files stored in the node(worker)
+	PrivateChan chan string 
 }

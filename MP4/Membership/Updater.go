@@ -17,7 +17,7 @@ var MemHBMap map[string]time.Time = make(map[string]time.Time)
 var MonitorList []string
 var MayFailMap map[string]time.Time = make(map[string]time.Time)
 var FailedNodeID chan string = make(chan string)
-var NewNodeChan chan string = make(chan sting)
+var NewNodeChan chan string = make(chan string)
 
 func UpdateMemshipList(recvMsg MP.Message) bool {
 	msgType := recvMsg.MessageType
@@ -78,7 +78,7 @@ func SendNewNodeID(newNodeID string) {
 }
 func WriteMemtableToJsonFile(fileAddr string) error {
 	file, _ := json.MarshalIndent(MembershipList, "", " ")
-	err := ioutil.WriteFile(fileAddr, file, 0644)
+	err := ioutil.WriteFile(fileAddr, file, 0777)
 	return err
 }
 

@@ -3,15 +3,32 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
 	//"io/ioutil"
 )
 
-//TODO Exclude ","
 func Parse(cmd string) []string {
-	cmd = strings.Join(strings.Fields(cmd), " ")
+	wordList := strings.Fields(cmd)
+	
+	cmd = ""
+
+	for _, word := range wordList {
+		if len(word) == 0 {
+			continue
+		}
+		for i := 0; i < len(word); i++ {
+			if unicode.IsDigit(rune(word[i])) || unicode.IsLetter(rune(word[i])) {
+				cmd += string(word[i])
+			}
+		}
+		cmd += " "
+	}
+	// cmd = strings.Join(strings.Fields(cmd), " ")
+	//fmt.Println(cmd)
 	return strings.Split(cmd, " ")
 }
 
@@ -19,6 +36,9 @@ func Parse(cmd string) []string {
 func countFromWordList(wordList []string, wordMap map[string]int) {
 	//Iterate word list
 	for _, word := range wordList {
+		if len(word) == 0 {
+			continue
+		}
 		if _, ok := wordMap[word]; ok {
 			//If the word exists in word map
 			wordMap[word]++
@@ -34,13 +54,16 @@ func PostProcess(wordMap map[string]int) string {
 	res := ""
 
 	for key, val := range wordMap {
-		res += key + ": " + "[" + strconv.Itoa(val) + "]" + "\n"
+		res += key + ":" + "[" + strconv.Itoa(val) + "]" + "\n"
 	}
 
 	return res
 }
 
 func main() {
+
+	//fmt.Println("****Enter exe!!")
+
 	var wordMap map[string]int
 	wordMap = make(map[string]int)
 
@@ -51,7 +74,7 @@ func main() {
 	//Open file
 	file, err := os.Open(filepath)
 	if err != nil {
-		fmt.Printf("os.Open() can't open file %s\n", filepath)
+		log.Printf("os.Open() can't open file %s\n", filepath)
 		return
 	}
 	defer file.Close()
@@ -67,18 +90,10 @@ func main() {
 	}
 
 	if err := scanner.Err(); err != nil {
-		fmt.Println("Error")
+		log.Println("Error")
 	}
 
 	res := PostProcess(wordMap)
-
-	// b, err := json.Marshal(wordMap)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// s := string(b)
-
 	fmt.Fprintf(os.Stdout, res)
 	//helper.WriteWordMapToJsonFile(wordMap, prefix)
 }

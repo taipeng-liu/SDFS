@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -14,7 +15,8 @@ const JsonFileName = "webMap.json"
 func parsePair(pair string) {
 	res := strings.Split(pair, " ")
 	if len(res) > 2 {
-		fmt.Println("Data Error!")
+		log.Println("Data Format Error!")
+		return
 	}
 	src := res[0]
 	tgt := res[1]
@@ -27,7 +29,7 @@ func PostProcess(wordMap map[string][]string) string {
 	res := ""
 
 	for key, list := range wordMap {
-		res += key + ": " + "["
+		res += key + ":" + "["
 		for idx, val := range list {
 			res += val
 			if idx != len(list)-1 {
@@ -43,12 +45,11 @@ func PostProcess(wordMap map[string][]string) string {
 func main() {
 
 	fileDir := os.Args[1]
-	// prefix := os.Args[2]
 
 	data, fileErr := os.Open(fileDir)
 	if fileErr != nil {
-		fmt.Println(fileErr)
-		panic(fileErr)
+		log.Printf("os.Open() error: Can't open file %s\n", fileDir)
+		return
 	}
 	defer data.Close()
 
@@ -70,6 +71,6 @@ func main() {
 
 	fmt.Fprint(os.Stdout, res)
 	// helper.WriteStringSliceMapToJson(MapperResult, prefix)
-	// ioutil.WriteFile(JsonFileName, b, 0644)
+	// ioutil.WriteFile(JsonFileName, b, 0777)
 
 }

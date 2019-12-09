@@ -1,14 +1,15 @@
 package config
 
 import (
-	"fmt"
+	"hash/fnv"
+	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"io/ioutil"
 	"strconv"
 	"strings"
 	"time"
+	"fmt"
 )
 
 const (
@@ -17,10 +18,14 @@ const (
 	TempfileDir  = "SDFS/tempFile"
 	DatanodePort = "8885"
 	NamenodePort = "8884"
-	ReplicaNum   = 4
+	ReplicaNum   = 3
 	BLOCK_SIZE   = 10 * 1024 * 1024
-	LINENUM 	 = 10
-	TempFile	 = "temp.txt"
+	LINENUM      = 10
+	TempFile     = "temp"
+	CacheDir     = "SDFS/sdfsFile/cache"
+	ResultDir    = "SDFS/localFile/result"
+	Map          = "map"
+	Reduce       = "reduce"
 )
 
 const (
@@ -33,22 +38,25 @@ const (
 	IntroducerAddress = "fa19-cs425-g73-01.cs.illinois.edu"
 )
 
-func AppendFileToFile(src_file string, dest_file string) {
-	dest_fd, err := os.OpenFile(dest_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+func AppendFileToFile(src_file string, dest_file string) error {
+	dest_fd, err := os.OpenFile(dest_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("AppendFileToFile: os.OpenFile() error")
+		return err
 	}
 	defer dest_fd.Close()
 
 	src_byte, err := ioutil.ReadFile(src_file)
 	if err != nil {
-		log.Fatal(err)
+		log.Println("AppendFileToFile: ioutil.ReadFile() error")
+		return err
 	}
 
 	if _, err := dest_fd.Write(src_byte); err != nil {
-		log.Fatal(err)
+		log.Println("AppendFileToFile: fd.Write() error")
+		return err
 	}
-
+	return nil
 }
 
 func ParseString(cmd string) []string {
@@ -128,10 +136,23 @@ func DecodeFileName(src string) string {
 	return res
 }
 
-func Min(a int, b int) int{
+func Min(a int, b int) int {
 	if a < b {
 		return a
-	}else{
+	} else {
 		return b
 	}
+}
+
+func ParseDir(str string) []string {
+	idx := strings.LastIndex(str, "/")
+	dirName := str[:idx]
+	fieName := str[idx+1 : len(str)]
+	return []string{dirName, fieName}
+}
+
+func Hash(s string) uint32 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return h.Sum32()
 }
