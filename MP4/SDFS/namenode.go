@@ -90,6 +90,7 @@ func (n *Namenode) RunReducer(reducerArg ReducerArg, res *int) error {
 
 	fileList := getFileListFromCacheMap(cacheMap)
 
+	fmt.Println("Partitioning work...")
 	var taskList []*Task
 	if partition_way == "hash" || strings.Contains(partition_way, "hash") {
 		taskList = hashPartition(fileList, N, "reduce", reducer, destfilename, cacheMap)
