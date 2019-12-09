@@ -54,6 +54,8 @@ func (n *Namenode) RunMapper(mapperArg MapperArg, res *int) error {
 	//Split fileList into taskList, return a list of Task
 	taskList := rangePartition(fileList, N, "map", mapper, prefix, nil)
 
+	go managePrivateChan(n.Workingmap)
+
 	//taskKeeper, keep tracing each task and deal with node failure
 	go taskKeeper(N, n.Workingmap, "map", false)
 
@@ -121,7 +123,6 @@ func (n *Namenode) RunReducer(reducerArg ReducerArg, res *int) error {
 }
 
 func (n *Namenode) SendWorkerFinishMsg(nodeID string, res *int) error {
-	fmt.Println("Receive finishMsg from node", nodeID)
 	go sendToPrivateChanManager(nodeID)
 	return nil
 }
