@@ -1,4 +1,4 @@
-# MP3 Simple Distributed File(SDFS) System 
+# Simple Distributed File(SDFS) System 
 
 
 ## Demo Use
